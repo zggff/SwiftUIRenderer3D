@@ -1,7 +1,7 @@
 import Metal
 import SharedShaderTypes
 
-public struct Mesh {
+public struct Mesh: @unchecked Sendable {
 	let vertex: MTLBuffer
 	let index: MTLBuffer
 	let count: Int

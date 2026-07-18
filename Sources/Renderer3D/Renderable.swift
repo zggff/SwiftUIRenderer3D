@@ -1,34 +1,23 @@
 import Metal
 import SharedShaderTypes
+import Synchronization
 import simd
 
-private final class LockedMeshStorage: @unchecked Sendable {
-	private var meshes: [ObjectIdentifier: Mesh] = [:]
-	private let lock = NSLock()
+private final class MeshCache: Sendable {
+	static let cache = MeshCache()
+	private let meshes = Mutex([ObjectIdentifier: Mesh]())
 
-	func getMesh(for id: ObjectIdentifier) -> Mesh? {
-		lock.lock()
-		defer { lock.unlock() }
-		return meshes[id]
-	}
-
-	func saveMesh(_ mesh: Mesh, for id: ObjectIdentifier) {
-		lock.lock()
-		defer { lock.unlock() }
-		meshes[id] = mesh
-	}
-}
-
-private enum MeshCache {
-	private static let storage = LockedMeshStorage()
-	static func mesh<T: Renderable>(for type: T.Type, device: MTLDevice) -> Mesh {
+	func mesh<T: Renderable>(for type: T.Type, device: MTLDevice) -> Mesh {
 		let id = ObjectIdentifier(type)
-		if let existingMesh = storage.getMesh(for: id) {
-			return existingMesh
+
+		if let mesh = meshes.withLock({ $0[id] }) {
+			return mesh
 		}
-		let newMesh = T.createMesh(for: device)
-		storage.saveMesh(newMesh, for: id)
-		return newMesh
+		let mesh = T.createMesh(for: device)
+		meshes.withLock { dict in
+			dict[id] = mesh
+		}
+		return mesh
 	}
 }
 
@@ -40,7 +29,7 @@ public protocol Renderable {
 
 extension Renderable {
 	public func mesh(for device: MTLDevice) -> Mesh {
-		return MeshCache.mesh(for: Self.self, device: device)
+		return MeshCache.cache.mesh(for: Self.self, device: device)
 	}
 }
 
