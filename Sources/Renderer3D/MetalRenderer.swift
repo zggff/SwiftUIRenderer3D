@@ -1,6 +1,7 @@
 import MetalKit
 import SharedShaderTypes
 
+@MainActor
 public class MetalRenderer: NSObject, MTKViewDelegate {
 	var parent: MetalView
 	var device: MTLDevice!
@@ -8,7 +9,6 @@ public class MetalRenderer: NSObject, MTKViewDelegate {
 	let pipeline: MTLRenderPipelineState
 	let depthState: MTLDepthStencilState
 
-	var instancesBuffer: MTLBuffer
 	var projection: Matrix = Matrix(1)
 
 	init(_ parent: MetalView, device: MTLDevice) {
@@ -16,16 +16,16 @@ public class MetalRenderer: NSObject, MTKViewDelegate {
 		self.device = device
 		self.commandQueue = device.makeCommandQueue()
 
-			let pipelineDescriptor = MTLRenderPipelineDescriptor()
-			let library: MTLLibrary
-			do {
-				library = try device.makeDefaultLibrary(bundle: .module)
-			} catch {
-				fatalError("Failed to load Renderer3D Metal library: \(error)")
-			}
+		let pipelineDescriptor = MTLRenderPipelineDescriptor()
+		let library: MTLLibrary
+		do {
+			library = try device.makeDefaultLibrary(bundle: .module)
+		} catch {
+			fatalError("Failed to load Renderer3D Metal library: \(error)")
+		}
 
-			pipelineDescriptor.vertexFunction = library.makeFunction(name: "vertexMain")
-			pipelineDescriptor.fragmentFunction = library.makeFunction(name: "fragmentMain")
+		pipelineDescriptor.vertexFunction = library.makeFunction(name: "vertexMain")
+		pipelineDescriptor.fragmentFunction = library.makeFunction(name: "fragmentMain")
 		pipelineDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
 		pipelineDescriptor.depthAttachmentPixelFormat = .depth32Float
 		pipelineDescriptor.vertexDescriptor = Vertex.defaultLayout
@@ -37,8 +37,6 @@ public class MetalRenderer: NSObject, MTKViewDelegate {
 		depthDescriptor.isDepthWriteEnabled = true
 
 		self.depthState = device.makeDepthStencilState(descriptor: depthDescriptor)!
-		self.instancesBuffer = device.makeBuffer(
-			length: 256 * MemoryLayout<InstanceUniforms>.stride)!
 		super.init()
 	}
 
@@ -76,39 +74,16 @@ public class MetalRenderer: NSObject, MTKViewDelegate {
 		renderEncoder.setVertexBytes(
 			&sceneUniforms, length: MemoryLayout<SceneUniforms>.stride, index: 1)
 
-		var renderGroups: [ObjectIdentifier: (mesh: Mesh, uniforms: [InstanceUniforms])] = [:]
-		for item in parent.models {
-			let typeId = ObjectIdentifier(type(of: item))
-			if renderGroups[typeId] != nil {
-				renderGroups[typeId]!.uniforms.append(item.uniform)
-			} else {
-				let mesh = item.mesh(for: device)
-				renderGroups[typeId] = (mesh: mesh, uniforms: [item.uniform])
+		if let (instancesBuffer, instructions) = parent.scene.instancesBuffer(for: device) {
+			for (mesh, offset, count) in instructions {
+				let mesh = mesh.mesh(for: device)
+				renderEncoder.setVertexBuffer(mesh.vertex, offset: 0, index: 0)
+				renderEncoder.setVertexBuffer(instancesBuffer, offset: offset, index: 2)
+				renderEncoder.drawIndexedPrimitives(
+					type: .triangle, indexCount: mesh.count, indexType: .uint16,
+					indexBuffer: mesh.index,
+					indexBufferOffset: 0, instanceCount: count)
 			}
-		}
-		let totalBufferSize =
-			renderGroups.values.reduce(
-				into: 0, { partialResult, r in partialResult += r.1.count })
-			* MemoryLayout<InstanceUniforms>.stride
-		if instancesBuffer.length < totalBufferSize {
-			instancesBuffer = device.makeBuffer(length: totalBufferSize)!
-		}
-
-		var offset = 0
-		for (mesh, instances) in renderGroups.values {
-			let byteCount = instances.count * MemoryLayout<InstanceUniforms>.stride
-			let destination = instancesBuffer.contents().advanced(by: offset)
-			instances.withUnsafeBufferPointer { pointer in
-				_ = memcpy(destination, pointer.baseAddress, byteCount)
-			}
-
-			renderEncoder.setVertexBuffer(mesh.vertex, offset: 0, index: 0)
-			renderEncoder.setVertexBuffer(instancesBuffer, offset: offset, index: 2)
-			renderEncoder.drawIndexedPrimitives(
-				type: .triangle, indexCount: mesh.count, indexType: .uint16,
-				indexBuffer: mesh.index,
-				indexBufferOffset: 0, instanceCount: instances.count)
-			offset += byteCount
 		}
 
 		renderEncoder.endEncoding()
