@@ -7,7 +7,7 @@ let package = Package(
 	name: "Renderer3D",
 	platforms: [
 		.macOS(.v15),
-		.iOS(.v16),
+		.iOS(.v18),
 	],
 	products: [
 		.library(
