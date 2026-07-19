@@ -31,6 +31,9 @@ extension Renderable {
 	public func mesh(for device: MTLDevice) -> Mesh {
 		return MeshCache.cache.mesh(for: Self.self, device: device)
 	}
+	public static func mesh(for device: MTLDevice) -> Mesh {
+		return MeshCache.cache.mesh(for: Self.self, device: device)
+	}
 }
 
 extension Renderable {
@@ -42,6 +45,12 @@ extension Renderable {
 
 public enum Primitive {
 	public struct Cube: Renderable {
+		public init(center: Vec3, size: Float, color: Vec3) {
+			self.center = center
+			self.size = Vec3(size, size, size)
+			self.color = color
+		}
+
 		public init(center: Vec3, size: Vec3, color: Vec3) {
 			self.center = center
 			self.size = size
