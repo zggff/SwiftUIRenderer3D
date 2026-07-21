@@ -24,8 +24,23 @@ public final class Scene3D {
 		return objects.values.map(\.count).reduce(0, +)
 	}
 
+	public struct Context {
+		fileprivate var scene: Scene3D
+
+		public func append<T: Renderable>(objects: [T]) {
+			scene.append(objects: objects)
+		}
+	}
+
 	public func finishDeclaration() {
 		version += 1
+	}
+
+	public func draw(_ content: (Context) -> Void) {
+        removeAll()
+		let context = Context(scene: self)
+		content(context)
+        finishDeclaration()
 	}
 
 	public func append<T: Renderable>(objects: [T]) {
