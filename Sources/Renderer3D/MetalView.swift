@@ -19,7 +19,7 @@ import SwiftUI
 public struct MetalView: ViewRepresentable {
 	let backgroundColor: MTLClearColor
 	let camera: Camera
-	@Binding var scene: Scene3D
+	var scene: Scene3D
 
 	var onScroll: ((CGFloat) -> Void)? = nil
 
@@ -36,12 +36,12 @@ public struct MetalView: ViewRepresentable {
 	public init(
 		backgroundColor: MTLClearColor,
 		camera: Camera,
-		scene: Binding<Scene3D>,
+		scene: Scene3D,
 		onScroll: ((CGFloat) -> Void)? = nil
 	) {
 		self.backgroundColor = backgroundColor
 		self.camera = camera
-		self._scene = scene
+		self.scene = scene
 		self.onScroll = onScroll
 	}
 
@@ -75,15 +75,8 @@ public struct MetalView: ViewRepresentable {
 	}
 
 	public func updateNSView(_ uiView: MTKView, context: ViewRepresentableContext<MetalView>) {
+		_ = scene.version
 		context.coordinator.parent = self
-
-		scene.onContentChanged = { [weak uiView] in
-			#if os(macOS)
-				uiView?.needsDisplay = true
-			#elseif os(iOS)
-				uiView?.setNeedsDisplay()
-			#endif
-		}
 
 		#if os(macOS)
 			uiView.needsDisplay = true

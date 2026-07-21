@@ -3,37 +3,10 @@ import SharedShaderTypes
 import Synchronization
 import simd
 
-private final class MeshCache: Sendable {
-	static let cache = MeshCache()
-	private let meshes = Mutex([ObjectIdentifier: Mesh]())
-
-	func mesh<T: Renderable>(for type: T.Type, device: MTLDevice) -> Mesh {
-		let id = ObjectIdentifier(type)
-
-		if let mesh = meshes.withLock({ $0[id] }) {
-			return mesh
-		}
-		let mesh = T.createMesh(for: device)
-		meshes.withLock { dict in
-			dict[id] = mesh
-		}
-		return mesh
-	}
-}
-
 public protocol Renderable {
 	var translation: Matrix { get }
 	var color: Vec3 { get }
-	static func createMesh(for device: MTLDevice) -> Mesh
-}
-
-extension Renderable {
-	public func mesh(for device: MTLDevice) -> Mesh {
-		return MeshCache.cache.mesh(for: Self.self, device: device)
-	}
-	public static func mesh(for device: MTLDevice) -> Mesh {
-		return MeshCache.cache.mesh(for: Self.self, device: device)
-	}
+	static func mesh(for device: MTLDevice) -> Mesh
 }
 
 extension Renderable {
@@ -62,8 +35,8 @@ public enum Primitive {
 		public let color: Vec3
 		public var translation: Matrix { Matrix.translation(center) * Matrix.scale(size) }
 
-		public static func createMesh(for device: MTLDevice) -> Mesh {
-			print("making a cube mesh")
+		public static func mesh(for device: MTLDevice) -> Mesh {
+			debugPrint("making a cube mesh")
 			return Mesh.cube(device)!
 		}
 	}
@@ -81,8 +54,8 @@ public enum Primitive {
 			Matrix.translation(center) * Matrix.scale(Vec3(repeating: radius))
 		}
 
-		public static func createMesh(for device: MTLDevice) -> Mesh {
-			print("making a sphere mesh")
+		public static func mesh(for device: MTLDevice) -> Mesh {
+			debugPrint("making a sphere mesh")
 			return Mesh.sphere(device, vertex_cnt: 10)!
 		}
 	}

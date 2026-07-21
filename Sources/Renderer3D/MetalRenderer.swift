@@ -76,7 +76,6 @@ public class MetalRenderer: NSObject, MTKViewDelegate {
 
 		if let (instancesBuffer, instructions) = parent.scene.instancesBuffer(for: device) {
 			for (mesh, offset, count) in instructions {
-				let mesh = mesh.mesh(for: device)
 				renderEncoder.setVertexBuffer(mesh.vertex, offset: 0, index: 0)
 				renderEncoder.setVertexBuffer(instancesBuffer, offset: offset, index: 2)
 				renderEncoder.drawIndexedPrimitives(

@@ -2,16 +2,18 @@ import SharedShaderTypes
 import SwiftUI
 import simd
 
-public typealias DrawInstruction = (Renderable.Type, Int, Int)
+public typealias DrawInstruction = (Mesh, Int, Int)
 
-public class Scene3D: Observable {
-	var onContentChanged: (() -> Void)?
+@Observable
+public final class Scene3D {
+	var version = 0
 
 	public init() {
 	}
 
-	var objects: [ObjectIdentifier: [any Renderable]] = [:]
-	var meshes: [ObjectIdentifier: Renderable.Type] = [:]
+	private var objects: [ObjectIdentifier: [any Renderable]] = [:]
+	private var meshCache: [ObjectIdentifier: Mesh] = [:]
+	private var types: [ObjectIdentifier: Renderable.Type] = [:]
 
 	private var drawInstructions: [DrawInstruction] = []
 	private var shouldRecount = false
@@ -23,7 +25,7 @@ public class Scene3D: Observable {
 	}
 
 	public func finishDeclaration() {
-		onContentChanged?()
+		version += 1
 	}
 
 	public func append<T: Renderable>(objects: [T]) {
@@ -31,7 +33,7 @@ public class Scene3D: Observable {
 		let id = ObjectIdentifier(T.self)
 		if self.objects[id] == nil {
 			self.objects[id] = []
-			self.meshes[id] = T.self
+			self.types[id] = T.self
 		}
 		self.objects[id]?.append(contentsOf: objects)
 	}
@@ -44,9 +46,12 @@ public class Scene3D: Observable {
 
 	public func removeAll() {
 		self.shouldRecount = true
-		for key in self.objects.keys {
-			objects[key]?.removeAll()
-		}
+		self.objects = [:]
+	}
+
+	public func cleanup() {
+		self.shouldRecount = true
+		self.meshCache = [:]
 	}
 
 	private func recalculate(for device: any MTLDevice) {
@@ -59,7 +64,10 @@ public class Scene3D: Observable {
 			instances.withUnsafeBufferPointer { pointer in
 				_ = memcpy(destination, pointer.baseAddress, byteCount)
 			}
-			drawInstructions.append((meshes[key]!, offset, objects.count))
+			if meshCache[key] == nil {
+				meshCache[key] = types[key]!.mesh(for: device)
+			}
+			drawInstructions.append((meshCache[key]!, offset, objects.count))
 			offset += byteCount
 		}
 	}
