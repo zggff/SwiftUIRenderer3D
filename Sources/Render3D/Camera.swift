@@ -1,10 +1,10 @@
+import Render3DShaders
 import simd
 
 public struct Camera {
 	let position: Vec3
 	let up: Vec3
 	let target: Vec3
-
 
 	public init(position: Vec3, target: Vec3, up: Vec3) {
 		self.position = position
@@ -25,5 +25,16 @@ public struct Camera {
 
 	var view: Matrix {
 		return Matrix.look_at(eye: position, target: target, up: up)
+	}
+
+	public func uniforms(for aspect: Float) -> CameraUniforms {
+		let projection = Matrix.projection(
+			projectionFov: Float(70).degrees,
+			near: 1,
+			far: 1000,
+			aspect: aspect)
+		return CameraUniforms(
+			projection: projection, view: view, position: position)
+
 	}
 }

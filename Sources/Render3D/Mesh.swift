@@ -1,12 +1,18 @@
 import Metal
-import Render3DShaders
+@_exported import Render3DShaders
 
 public struct Mesh: @unchecked Sendable {
-	let vertex: MTLBuffer
-	let index: MTLBuffer
-	let count: Int
+	public let vertex: MTLBuffer
+	public let index: MTLBuffer
+	public let count: Int
 
-	init?(_ device: MTLDevice, vertices: [Vertex], indices: [UInt16]) {
+	public init(vertex: any MTLBuffer, index: any MTLBuffer, count: Int) {
+		self.vertex = vertex
+		self.index = index
+		self.count = count
+	}
+
+	public init?(_ device: MTLDevice, vertices: [Vertex], indices: [UInt16]) {
 		guard
 			let vertex = device.makeBuffer(
 				bytes: vertices, length: vertices.count * MemoryLayout<Vertex>.stride),
@@ -20,7 +26,8 @@ public struct Mesh: @unchecked Sendable {
 		self.count = indices.count
 	}
 
-	static func cube(_ device: MTLDevice) -> Mesh? {
+	public static func cubePrimitive(_ device: MTLDevice) -> Mesh? {
+
 		let s = Float(0.5)
 		let vertices: [Vertex] = [
 			Vertex(position: SIMD3<Float>(-s, -s, s)),
@@ -43,7 +50,52 @@ public struct Mesh: @unchecked Sendable {
 		return Mesh(device, vertices: vertices, indices: indices)
 	}
 
-	static func sphere(_ device: MTLDevice, vertex_cnt: UInt16 = 100) -> Mesh? {
+	public static func cube(_ device: MTLDevice) -> Mesh? {
+		let s = Float(0.5)
+		let vertices: [Vertex] = [
+			Vertex(position: Vec3(-s, -s, s), normal: SIMD3<Float>(0, 0, 1)),
+			Vertex(position: Vec3(s, -s, s), normal: SIMD3<Float>(0, 0, 1)),
+			Vertex(position: Vec3(s, s, s), normal: SIMD3<Float>(0, 0, 1)),
+			Vertex(position: Vec3(-s, s, s), normal: SIMD3<Float>(0, 0, 1)),
+
+			Vertex(position: Vec3(s, -s, s), normal: SIMD3<Float>(1, 0, 0)),
+			Vertex(position: Vec3(s, -s, -s), normal: SIMD3<Float>(1, 0, 0)),
+			Vertex(position: Vec3(s, s, -s), normal: SIMD3<Float>(1, 0, 0)),
+			Vertex(position: Vec3(s, s, s), normal: SIMD3<Float>(1, 0, 0)),
+
+			Vertex(position: Vec3(s, -s, -s), normal: SIMD3<Float>(0, 0, -1)),
+			Vertex(position: Vec3(-s, -s, -s), normal: SIMD3<Float>(0, 0, -1)),
+			Vertex(position: Vec3(-s, s, -s), normal: SIMD3<Float>(0, 0, -1)),
+			Vertex(position: Vec3(s, s, -s), normal: SIMD3<Float>(0, 0, -1)),
+
+			Vertex(position: Vec3(-s, -s, -s), normal: SIMD3<Float>(-1, 0, 0)),
+			Vertex(position: Vec3(-s, -s, s), normal: SIMD3<Float>(-1, 0, 0)),
+			Vertex(position: Vec3(-s, s, s), normal: SIMD3<Float>(-1, 0, 0)),
+			Vertex(position: Vec3(-s, s, -s), normal: SIMD3<Float>(-1, 0, 0)),
+
+			Vertex(position: Vec3(-s, s, s), normal: SIMD3<Float>(0, 1, 0)),
+			Vertex(position: Vec3(s, s, s), normal: SIMD3<Float>(0, 1, 0)),
+			Vertex(position: Vec3(s, s, -s), normal: SIMD3<Float>(0, 1, 0)),
+			Vertex(position: Vec3(-s, s, -s), normal: SIMD3<Float>(0, 1, 0)),
+
+			Vertex(position: Vec3(-s, -s, -s), normal: SIMD3<Float>(0, -1, 0)),
+			Vertex(position: Vec3(s, -s, -s), normal: SIMD3<Float>(0, -1, 0)),
+			Vertex(position: Vec3(s, -s, s), normal: SIMD3<Float>(0, -1, 0)),
+			Vertex(position: Vec3(-s, -s, s), normal: SIMD3<Float>(0, -1, 0)),
+		]
+
+		let indices: [UInt16] = [
+			0, 1, 2, 2, 3, 0,
+			4, 5, 6, 6, 7, 4,
+			8, 9, 10, 10, 11, 8,
+			12, 13, 14, 14, 15, 12,
+			16, 17, 18, 18, 19, 16,
+			20, 21, 22, 22, 23, 20,
+		]
+		return Mesh(device, vertices: vertices, indices: indices)
+	}
+
+	public static func sphere(_ device: MTLDevice, vertex_cnt: UInt16 = 100) -> Mesh? {
 		var vertices: [Vertex] = []
 		var indices: [UInt16] = []
 		let radius: Float = 0.5
@@ -59,7 +111,8 @@ public struct Mesh: @unchecked Sendable {
 				let z = xy * sinf(sectorAngle)
 
 				let pos = Vec3(x, y, z)
-				vertices.append(Vertex(position: pos))
+				let norm = normalize(pos)
+				vertices.append(Vertex(position: pos, normal: norm))
 			}
 		}
 		for i in 0..<vertex_cnt {
@@ -69,13 +122,13 @@ public struct Mesh: @unchecked Sendable {
 			for _ in 0..<vertex_cnt {
 				if i != 0 {
 					indices.append(k1)
-					indices.append(k2)
 					indices.append(k1 + 1)
+					indices.append(k2)
 				}
 				if i != (vertex_cnt - 1) {
-					indices.append(k1 + 1)  // triangle 2
-					indices.append(k2)
+					indices.append(k1 + 1)
 					indices.append(k2 + 1)
+					indices.append(k2)
 				}
 				k1 += 1
 				k2 += 1

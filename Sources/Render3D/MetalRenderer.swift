@@ -7,6 +7,9 @@ public class MetalRenderer {
 	let pipeline: MTLRenderPipelineState
 	let depthState: MTLDepthStencilState
 
+	var sceneBuffer: MTLBuffer
+	var cameraBuffer: MTLBuffer
+
 	public init(device: MTLDevice = MTLCreateSystemDefaultDevice()!) {
 		self.device = device
 		self.commandQueue = device.makeCommandQueue()
@@ -32,6 +35,8 @@ public class MetalRenderer {
 		depthDescriptor.isDepthWriteEnabled = true
 
 		self.depthState = device.makeDepthStencilState(descriptor: depthDescriptor)!
+		self.cameraBuffer = CameraUniforms.allocateBuffer(for: device)!
+		self.sceneBuffer = SceneUniforms.allocateBuffer(for: device)!
 	}
 
 	public func draw(
@@ -42,12 +47,6 @@ public class MetalRenderer {
 		commandBuffer: MTLCommandBuffer
 	) {
 		let aspect = Float(viewportSize.width) / Float(viewportSize.height)
-		let projection = Matrix.projection(
-			projectionFov: Float(70).degrees,
-			near: 0.1,
-			far: 1000,
-			aspect: aspect)
-		var sceneUniforms = SceneUniforms(projection: projection, view: camera.view)
 
 		renderPassDescriptor.depthAttachment.clearDepth = 1.0
 		renderPassDescriptor.depthAttachment.loadAction = .clear
@@ -62,13 +61,22 @@ public class MetalRenderer {
 		renderEncoder.setRenderPipelineState(pipeline)
 		renderEncoder.setDepthStencilState(depthState)
 
-		renderEncoder.setVertexBytes(
-			&sceneUniforms, length: MemoryLayout<SceneUniforms>.stride, index: 1)
+		if let (instancesBuffer, instructions) = scene.renderInfo(for: device) {
+			scene.uniforms.write(into: sceneBuffer)
+			camera.uniforms(for: aspect).write(into: cameraBuffer)
 
-		if let (instancesBuffer, instructions) = scene.instancesBuffer(for: device) {
+			renderEncoder.setVertexBuffer(cameraBuffer, offset: 0, index: 1)
+			renderEncoder.setVertexBuffer(sceneBuffer, offset: 0, index: 2)
+
+			renderEncoder.setFragmentBuffer(cameraBuffer, offset: 0, index: 1)
+			renderEncoder.setFragmentBuffer(sceneBuffer, offset: 0, index: 2)
+
+
 			for (mesh, offset, count) in instructions {
 				renderEncoder.setVertexBuffer(mesh.vertex, offset: 0, index: 0)
-				renderEncoder.setVertexBuffer(instancesBuffer, offset: offset, index: 2)
+				renderEncoder.setVertexBuffer(instancesBuffer, offset: offset, index: 3)
+
+				renderEncoder.setFragmentBuffer(instancesBuffer, offset: offset, index: 3)
 				renderEncoder.drawIndexedPrimitives(
 					type: .triangle, indexCount: mesh.count, indexType: .uint16,
 					indexBuffer: mesh.index,
