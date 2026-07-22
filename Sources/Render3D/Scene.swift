@@ -1,12 +1,13 @@
-import SharedShaderTypes
-import SwiftUI
 import simd
+import Render3DShaders
+import Observation
+import Metal
 
 public typealias DrawInstruction = (Mesh, Int, Int)
 
 @Observable
 public final class Scene3D {
-	var version = 0
+	public var version = 0
 
 	public init() {
 	}

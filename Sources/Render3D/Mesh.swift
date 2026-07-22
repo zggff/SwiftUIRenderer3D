@@ -1,5 +1,5 @@
 import Metal
-import SharedShaderTypes
+import Render3DShaders
 
 public struct Mesh: @unchecked Sendable {
 	let vertex: MTLBuffer

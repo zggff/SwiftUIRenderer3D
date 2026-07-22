@@ -1,5 +1,19 @@
 #include <metal_stdlib>
-#include "../../SharedShaderTypes/bridge.h"
+#include <simd/simd.h>
+
+struct Vertex {
+    vector_float3 position [[attribute(0)]];
+};
+
+struct SceneUniforms {
+    matrix_float4x4 projection;
+    matrix_float4x4 view;
+};
+
+struct InstanceUniforms {
+    matrix_float4x4 translation;
+    vector_float3 color;
+};
 
 using namespace metal;
 

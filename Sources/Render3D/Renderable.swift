@@ -1,7 +1,7 @@
 import Metal
-import SharedShaderTypes
 import Synchronization
 import simd
+import Render3DShaders
 
 public protocol Renderable {
 	var translation: Matrix { get }

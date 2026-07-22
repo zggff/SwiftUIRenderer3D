@@ -1,4 +1,5 @@
 import MetalKit
+@_exported import Render3D
 import SwiftUI
 
 #if os(macOS)
@@ -29,8 +30,8 @@ public struct MetalView: ViewRepresentable {
 		}
 		return device
 	}()
-	public func makeCoordinator() -> MetalRenderer {
-		MetalRenderer(self, device: Self.device)
+	public func makeCoordinator() -> MetalViewCoordinator {
+		MetalViewCoordinator(self, device: Self.device)
 	}
 
 	public init(
@@ -55,6 +56,7 @@ public struct MetalView: ViewRepresentable {
 		mtkView.device = Self.device
 		mtkView.framebufferOnly = false
 		mtkView.drawableSize = mtkView.frame.size
+		mtkView.clearColor = backgroundColor
 
 		mtkView.scrollHandler = onScroll
 		return mtkView
@@ -76,6 +78,7 @@ public struct MetalView: ViewRepresentable {
 
 	public func updateNSView(_ uiView: MTKView, context: ViewRepresentableContext<MetalView>) {
 		_ = scene.version
+		uiView.clearColor = backgroundColor
 		context.coordinator.parent = self
 
 		#if os(macOS)

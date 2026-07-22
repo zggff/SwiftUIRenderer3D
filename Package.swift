@@ -4,29 +4,43 @@
 import PackageDescription
 
 let package = Package(
-	name: "Renderer3D",
+	name: "Render3D",
 	platforms: [
 		.macOS(.v15),
 		.iOS(.v18),
 	],
 	products: [
 		.library(
-			name: "Renderer3D",
-			targets: ["Renderer3D"]
-		)
+			name: "Render3D",
+			targets: ["Render3D"]
+		),
+		.library(
+			name: "Render3DViews",
+			targets: ["Render3DViews"]
+		),
+
 	],
 	targets: [
-        .target(
-            name: "SharedShaderTypes",
-            publicHeadersPath: ".",
-        ),
 		.target(
-			name: "Renderer3D",
-            dependencies: ["SharedShaderTypes"],
+			name: "Render3DShadersC",
+			publicHeadersPath: ".",
+		),
+
+		.target(
+			name: "Render3DShaders",
+			dependencies: ["Render3DShadersC"],
 			resources: [
-				.process("Shader/shader.metal")
+				.process("Shaders")
 			],
-		)
+		),
+		.target(
+			name: "Render3D",
+			dependencies: ["Render3DShaders"],
+		),
+		.target(
+			name: "Render3DViews",
+			dependencies: ["Render3D"],
+		),
 	],
 	swiftLanguageModes: [.v6]
 )
