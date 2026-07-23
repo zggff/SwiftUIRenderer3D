@@ -18,15 +18,22 @@ public struct Mesh: @unchecked Sendable {
 	public let index: MTLBuffer
 	public let count: Int
 	public let indexType: MTLIndexType
+	public let cullMode: MTLCullMode
 
-	public init(vertex: any MTLBuffer, index: any MTLBuffer, count: Int, indexType: MTLIndexType) {
+	public init(
+		vertex: any MTLBuffer, index: any MTLBuffer, count: Int, indexType: MTLIndexType,
+		cullMode: MTLCullMode = .back
+	) {
 		self.vertex = vertex
 		self.index = index
 		self.count = count
 		self.indexType = indexType
+		self.cullMode = cullMode
 	}
 
-	public init?<I: MetalIndex>(_ device: MTLDevice, vertices: [Vertex], indices: [I]) {
+	public init?<I: MetalIndex>(
+		_ device: MTLDevice, vertices: [Vertex], indices: [I], cullMode: MTLCullMode = .back
+	) {
 		guard !vertices.isEmpty, !indices.isEmpty else { return nil }
 
 		let vertex = vertices.withUnsafeBytes { vPtr in
@@ -43,7 +50,7 @@ public struct Mesh: @unchecked Sendable {
 		}
 		guard let vertex, let index else { return nil }
 
-		self.init(vertex: vertex, index: index, count: indices.count, indexType: I.metalIndexType)
+		self.init(vertex: vertex, index: index, count: indices.count, indexType: I.metalIndexType, cullMode: cullMode)
 	}
 
 	public static func cubePrimitive(_ device: MTLDevice) -> Mesh? {

@@ -109,7 +109,6 @@ public class OITTransparencyHandler {
 		guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: pass) else {
 			return
 		}
-		encoder.setCullMode(.back)
 		encoder.setRenderPipelineState(accumulationPipelineState)
 		encoder.setDepthStencilState(depthStateTransparent)
 
@@ -118,14 +117,15 @@ public class OITTransparencyHandler {
 		encoder.setFragmentBuffer(cameraBuffer, offset: 0, index: 1)
 		encoder.setFragmentBuffer(sceneBuffer, offset: 0, index: 2)
 
-		if let (instancesBuffer, instructions) = scene.renderInfoTransparent()		{
+		if let (instancesBuffer, instructions) = scene.renderInfoTransparent() {
 			for (mesh, offset, count) in instructions {
+				encoder.setCullMode(mesh.cullMode)
 				encoder.setVertexBuffer(mesh.vertex, offset: 0, index: 0)
 				encoder.setVertexBuffer(instancesBuffer, offset: offset, index: 3)
 				encoder.setFragmentBuffer(instancesBuffer, offset: offset, index: 3)
 
 				encoder.drawIndexedPrimitives(
-					type: .triangle, indexCount: mesh.count, indexType: .uint16,
+					type: .triangle, indexCount: mesh.count, indexType: mesh.indexType,
 					indexBuffer: mesh.index, indexBufferOffset: 0, instanceCount: count
 				)
 			}

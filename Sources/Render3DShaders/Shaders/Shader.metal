@@ -25,11 +25,13 @@ vertex VertexOutput vertexMain(Vertex v [[stage_in]],
 };
 
 fragment half4 fragmentMain(VertexOutput frag [[stage_in]], 
+                            bool frontFacing [[front_facing]],
                             constant CameraUniforms &camera [[buffer(1)]],
                             constant SceneUniforms &scene [[buffer(2)]],
                             constant InstanceUniforms *models [[buffer(3)]]) {
-
-
+    if (!frontFacing) {
+        frag.normal =- frag.normal;
+    }
 
     InstanceUniforms instance = models[frag.instanceID];
     if (instance.skipLight) return half4(half3(instance.color.rgb), half(instance.color.a));

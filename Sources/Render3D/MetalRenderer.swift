@@ -89,7 +89,6 @@ public class MetalRenderer {
 				descriptor: renderPassDescriptor)
 		else { return }
 
-		renderEncoder.setCullMode(.back)
 		renderEncoder.setRenderPipelineState(pipeline)
 
 		if let (instancesBuffer, instructions) = scene.renderInfoOpaque() {
@@ -104,6 +103,7 @@ public class MetalRenderer {
 
 			renderEncoder.setDepthStencilState(depthState)
 			for (mesh, offset, count) in instructions {
+                renderEncoder.setCullMode(mesh.cullMode)
 				renderEncoder.setVertexBuffer(mesh.vertex, offset: 0, index: 0)
 				renderEncoder.setVertexBuffer(instancesBuffer, offset: offset, index: 3)
 				renderEncoder.setFragmentBuffer(instancesBuffer, offset: offset, index: 3)
