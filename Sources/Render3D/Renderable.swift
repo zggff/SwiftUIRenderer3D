@@ -5,7 +5,8 @@ import simd
 
 public protocol Renderable {
 	var model: Matrix { get }
-	var color: Vec3 { get }
+	var color: Vec4 { get }
+	var center: Vec3 { get }
 	var uniform: InstanceUniforms { get }
 
 	func mesh(for device: MTLDevice) -> Mesh

@@ -21,22 +21,42 @@ extension Vertex {
 	}
 }
 
-public protocol WritableIntoBuffer {}
-
-extension CameraUniforms: WritableIntoBuffer {}
-extension SceneUniforms: WritableIntoBuffer {}
+public protocol WritableIntoBuffer {
+	func write(into buffer: MTLBuffer, offset: Int) -> Int
+}
 
 extension WritableIntoBuffer {
-	public func write(into buffer: MTLBuffer, offset: Int = 0) {
+	@discardableResult
+	public func write(into buffer: MTLBuffer, offset: Int = 0) -> Int {
 		withUnsafeBytes(of: self) { bytes in
 			buffer.contents()
 				.advanced(by: offset)
 				.copyMemory(
 					from: bytes.baseAddress!, byteCount: MemoryLayout<Self>.stride)
 		}
+		return MemoryLayout<Self>.stride
 	}
+
 	public static func allocateBuffer(for device: MTLDevice) -> MTLBuffer? {
 		device.makeBuffer(length: MemoryLayout<Self>.stride)
+	}
+}
+
+extension CameraUniforms: WritableIntoBuffer {}
+extension SceneUniforms: WritableIntoBuffer {}
+extension InstanceUniforms: WritableIntoBuffer {}
+
+extension [InstanceUniforms]: WritableIntoBuffer {
+	public func write(into buffer: MTLBuffer, offset: Int = 0) -> Int {
+		let byteCount = self.count * MemoryLayout<InstanceUniforms>.stride
+		self.withUnsafeBufferPointer { bytes in
+			buffer.contents()
+				.advanced(by: offset)
+				.copyMemory(
+					from: bytes.baseAddress!,
+					byteCount: byteCount)
+		}
+		return byteCount
 	}
 }
 

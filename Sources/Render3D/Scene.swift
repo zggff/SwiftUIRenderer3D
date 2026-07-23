@@ -7,56 +7,89 @@ public typealias DrawInstruction = (Mesh, Int, Int)
 
 @Observable
 public final class Scene3D {
-	public var version = 0
+	public init() {}
 
-	public init() {
+	public var version = 0
+	public var uniforms: SceneUniforms {
+		SceneUniforms(
+			lightDirection: [0, 1, 0],
+			lightColor: [1, 1, 1],
+			diffuseStrength: 0.0,
+			ambientStrength: 0.8
+		)
+	}
+
+	private var _device: (any MTLDevice)? = nil
+	public var device: (any MTLDevice)? {
+		get {
+			_device
+		}
+		set {
+			let isNew =
+				switch (self._device, newValue) {
+					case (let deviceOld?, let deviceNew?):
+						ObjectIdentifier(deviceOld as AnyObject)
+							!= ObjectIdentifier(deviceNew as AnyObject)
+					case (nil, nil): false
+					default: true
+				}
+			if isNew {
+				self._buffer = nil
+				self._device = newValue
+				self.meshCache = [:]
+			}
+		}
 	}
 
 	private var objects: [ObjectIdentifier: [any Renderable]] = [:]
 	private var objectsNonCachable: [any Renderable] = []
+	private var objectsTransparent: [any Renderable] = []
 
 	private var meshCache: [ObjectIdentifier: Mesh] = [:]
 	private var types: [ObjectIdentifier: Renderable.Type] = [:]
 
 	private var drawInstructions: [DrawInstruction] = []
-	private var shouldRecount = false
+	private var shouldUpdate = false
 
-	private var instancesBuffer: MTLBuffer? = nil
-
-	public var instanceCount: Int {
+	public var countOpaque: Int {
 		return objects.values.map(\.count).reduce(0, +) + objectsNonCachable.count
 	}
+	public var countTransparent: Int {
+		objectsTransparent.count
+	}
+	public var count: Int {
+		countOpaque + countTransparent
+	}
 
-	public struct Context {
-		fileprivate var scene: Scene3D
-
-		public func append<T: Renderable>(objects: [T]) {
-			scene.append(objects: objects)
+	private var _buffer: MTLBuffer? = nil
+	private var buffer: MTLBuffer {
+		let size = count * MemoryLayout<InstanceUniforms>.stride
+		if _buffer?.length ?? 0 < size {
+			_buffer = device!.makeBuffer(length: size)
 		}
+		return _buffer!
+	}
+
+	private func mesh(_ device: MTLDevice, _ obj: any Renderable) -> Mesh {
+		let objType = type(of: obj)
+		guard objType.cachable else {
+			return obj.mesh(for: device)
+		}
+		let id = ObjectIdentifier(objType)
+		guard let mesh = meshCache[id] else {
+			let mesh = obj.mesh(for: device)
+			meshCache[id] = mesh
+			return mesh
+		}
+		return mesh
 	}
 
 	public func finishDeclaration() {
 		version += 1
 	}
 
-	public var uniforms: SceneUniforms {
-		SceneUniforms(
-			lightDirection: [0, 1, 0],
-            lightColor: [1, 1, 1],
-			diffuseStrength: 0.0,
-			ambientStrength: 0.8
-		)
-	}
-
-	public func draw(_ content: (Context) -> Void) {
-		removeAll()
-		let context = Context(scene: self)
-		content(context)
-		finishDeclaration()
-	}
-
 	public func append<T: Renderable>(objects: [T]) {
-		self.shouldRecount = true
+		self.shouldUpdate = true
 		if T.cachable {
 			let id = ObjectIdentifier(T.self)
 			if self.objects[id] == nil {
@@ -69,63 +102,95 @@ public final class Scene3D {
 		}
 	}
 
+	public func appendTransparent<T: Renderable>(objects: [T]) {
+		self.objectsTransparent.append(contentsOf: objects)
+	}
+
 	public func removeAll() {
-		self.shouldRecount = true
+		self.shouldUpdate = true
 		self.objects = [:]
 		self.objectsNonCachable = []
 	}
 
 	public func cleanup() {
-		self.shouldRecount = true
+		self.shouldUpdate = true
 		self.meshCache = [:]
 	}
 
-	private func recalculate(for device: any MTLDevice) {
+	private func update() {
+		guard let device else { return }
+
 		self.drawInstructions.removeAll()
 		var offset = 0
-		for (key, objects) in objects {
-			let instances = objects.map(\.uniform)
-			let byteCount = objects.count * MemoryLayout<InstanceUniforms>.stride
-			let destination = instancesBuffer!.contents().advanced(by: offset)
-			instances.withUnsafeBufferPointer { pointer in
-				_ = memcpy(destination, pointer.baseAddress, byteCount)
-			}
-			if meshCache[key] == nil {
-				meshCache[key] = objects.first!.mesh(for: device)
-			}
-			drawInstructions.append((meshCache[key]!, offset, objects.count))
-			offset += byteCount
+		for objects in objects.values {
+			drawInstructions.append((mesh(device, objects.first!), offset, objects.count))
+			offset += objects.map(\.uniform).write(into: buffer, offset: offset)
 		}
 		guard objectsNonCachable.count > 0 else { return }
 
-		let instances = objectsNonCachable.map(\.uniform)
-		let byteCount = objectsNonCachable.count * MemoryLayout<InstanceUniforms>.stride
-		let destination = instancesBuffer!.contents().advanced(by: offset)
-		instances.withUnsafeBufferPointer { pointer in
-			_ = memcpy(destination, pointer.baseAddress, byteCount)
-		}
-
+		_ = objectsNonCachable.map(\.uniform).write(into: buffer, offset: offset)
 		for (i, object) in objectsNonCachable.enumerated() {
 			let mesh = object.mesh(for: device)
 			drawInstructions.append((mesh, offset + i * MemoryLayout<InstanceUniforms>.stride, 1))
 		}
 	}
 
-	public func renderInfo(for device: any MTLDevice) -> (MTLBuffer, [DrawInstruction])? {
-		guard instanceCount > 0 else {
+	func renderInfoOpaque() -> (MTLBuffer, [DrawInstruction])? {
+		guard let _ = device else {
+			fatalError("device must be set")
+		}
+
+		guard count > 0 else {
 			return nil
 		}
-		if !shouldRecount, let instancesBuffer {
-			return (instancesBuffer, drawInstructions)
+		if !shouldUpdate {
+			return (buffer, drawInstructions)
 		}
 
-		shouldRecount = false
-		let totalBufferSize = instanceCount * MemoryLayout<InstanceUniforms>.stride
-		if (instancesBuffer?.length ?? 0) < totalBufferSize {
-			instancesBuffer = device.makeBuffer(length: totalBufferSize)!
-		}
-
-		recalculate(for: device)
-		return (instancesBuffer!, self.drawInstructions)
+		shouldUpdate = false
+		update()
+		return (buffer, self.drawInstructions)
 	}
+
+	func renderInfoTransparent() -> (MTLBuffer, [DrawInstruction])? {
+		guard let device else {
+			fatalError("device must be set")
+		}
+
+		guard countTransparent > 0 else {
+			return nil
+		}
+
+		let offset = countOpaque * MemoryLayout<InstanceUniforms>.stride
+		let instances = objectsTransparent.map(\.uniform)
+		_ = instances.write(into: buffer, offset: offset)
+
+		let instructions = objectsTransparent.enumerated().map { (i, obj) in
+			(mesh(device, obj), offset + i * MemoryLayout<InstanceUniforms>.stride, 1)
+		}
+
+		return (buffer, instructions)
+	}
+
+	public func draw(_ content: (Context) -> Void) {
+		removeAll()
+		let context = Context(scene: self)
+		content(context)
+		finishDeclaration()
+	}
+
+	public struct Context {
+		fileprivate var scene: Scene3D
+
+		public func draw<T: Renderable>(_ objects: [T]) {
+			scene.append(objects: objects)
+		}
+		public func draw<T: Renderable>(_ object: T) {
+			scene.append(objects: [object])
+		}
+		public func drawTransparent<T: Renderable>(_ objects: [T]) {
+			scene.appendTransparent(objects: objects)
+		}
+	}
+
 }

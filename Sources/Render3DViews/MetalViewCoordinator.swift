@@ -23,7 +23,7 @@ public class MetalViewCoordinator: NSObject, MTKViewDelegate {
 
 		renderer.draw(
 			scene: parent.scene, camera: parent.camera,
-			viewportSize: view.bounds.size, renderPassDescriptor: renderPassDescriptor,
+			viewportSize: view.drawableSize, renderPassDescriptor: renderPassDescriptor,
 			commandBuffer: commandBuffer)
 
 		commandBuffer.present(drawable)

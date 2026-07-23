@@ -1,16 +1,8 @@
 #include <metal_stdlib>
-#include <simd/simd.h>
 
-#include "../../Render3DShadersC/bridge.h"
+#include "./Shared.h"
 
 using namespace metal;
-
-struct VertexOutput {
-    float4 position [[position]];
-    float3 normal;
-    float3 worldPosition;
-    uint instanceID;
-};
 
 
 vertex VertexOutput vertexMain(Vertex v [[stage_in]],
@@ -40,7 +32,7 @@ fragment half4 fragmentMain(VertexOutput frag [[stage_in]],
 
 
     InstanceUniforms instance = models[frag.instanceID];
-    if (instance.skipLight) return half4(half3(instance.color), 1.0h);
+    if (instance.skipLight) return half4(half3(instance.color.rgb), half(instance.color.a));
 
     float3 lightDir = normalize(scene.lightDirection);
 
@@ -74,10 +66,10 @@ fragment half4 fragmentMain(VertexOutput frag [[stage_in]],
         scene.lightColor;
 
     float3 finalColor =
-        instance.color * lighting + specularLight;
+        instance.color.rgb * lighting + specularLight;
 
     return half4(
         half3(finalColor),
-        1.0h
+        half(instance.color.a)
     );
 };

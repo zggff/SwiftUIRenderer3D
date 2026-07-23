@@ -5,8 +5,10 @@
 
 #ifdef __METAL_VERSION__
 #define VERTEX_ATTR(x) [[attribute(x)]]
+#define VERTEX_POS [[position]]
 #else
 #define VERTEX_ATTR(x)
+#define VERTEX_POS
 #endif
 
 struct Vertex {
@@ -31,7 +33,7 @@ struct SceneUniforms {
 struct InstanceUniforms {
   matrix_float4x4 model;
   matrix_float3x3 normal;
-  vector_float3 color;
+  vector_float4 color;
   float shininess;
 
   int skipLight;
