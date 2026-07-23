@@ -1,29 +1,49 @@
 import Metal
 @_exported import Render3DShaders
 
+public protocol MetalIndex {
+	static var metalIndexType: MTLIndexType { get }
+}
+
+extension UInt16: MetalIndex {
+	public static let metalIndexType: MTLIndexType = .uint16
+}
+
+extension UInt32: MetalIndex {
+	public static let metalIndexType: MTLIndexType = .uint32
+}
+
 public struct Mesh: @unchecked Sendable {
 	public let vertex: MTLBuffer
 	public let index: MTLBuffer
 	public let count: Int
+	public let indexType: MTLIndexType
 
-	public init(vertex: any MTLBuffer, index: any MTLBuffer, count: Int) {
+	public init(vertex: any MTLBuffer, index: any MTLBuffer, count: Int, indexType: MTLIndexType) {
 		self.vertex = vertex
 		self.index = index
 		self.count = count
+		self.indexType = indexType
 	}
 
-	public init?(_ device: MTLDevice, vertices: [Vertex], indices: [UInt16]) {
-		guard
-			let vertex = device.makeBuffer(
-				bytes: vertices, length: vertices.count * MemoryLayout<Vertex>.stride),
-			let index = device.makeBuffer(
-				bytes: indices, length: indices.count * MemoryLayout<UInt16>.stride)
-		else {
-			return nil
+	public init?<I: MetalIndex>(_ device: MTLDevice, vertices: [Vertex], indices: [I]) {
+		guard !vertices.isEmpty, !indices.isEmpty else { return nil }
+
+		let vertex = vertices.withUnsafeBytes { vPtr in
+			device.makeBuffer(
+				bytes: vPtr.baseAddress!,
+				length: vPtr.count,
+			)
 		}
-		self.vertex = vertex
-		self.index = index
-		self.count = indices.count
+		let index = indices.withUnsafeBytes { iPtr in
+			device.makeBuffer(
+				bytes: iPtr.baseAddress!,
+				length: iPtr.count,
+			)
+		}
+		guard let vertex, let index else { return nil }
+
+		self.init(vertex: vertex, index: index, count: indices.count, indexType: I.metalIndexType)
 	}
 
 	public static func cubePrimitive(_ device: MTLDevice) -> Mesh? {

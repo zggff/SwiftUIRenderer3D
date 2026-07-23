@@ -109,7 +109,7 @@ public class MetalRenderer {
 				renderEncoder.setFragmentBuffer(instancesBuffer, offset: offset, index: 3)
 
 				renderEncoder.drawIndexedPrimitives(
-					type: .triangle, indexCount: mesh.count, indexType: .uint16,
+					type: .triangle, indexCount: mesh.count, indexType: mesh.indexType,
 					indexBuffer: mesh.index,
 					indexBufferOffset: 0, instanceCount: count)
 			}
