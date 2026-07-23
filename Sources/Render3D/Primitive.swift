@@ -42,36 +42,26 @@ public enum Primitive {
 		}
 	}
 
-    /// simplest cube without support for lighting and as such fewer vertices
+	/// simplest cube without support for lighting and as such fewer vertices
 	public struct CubePrimitive: Renderable {
 		public init(center: Vec3, size: Float, color: Vec4) {
-			self.center = center
-			self.size = Vec3(size, size, size)
 			self.color = color
+			self.center = center
+			self.model = Matrix.translation(center) * Matrix.scale(Vec3(size, size, size))
+			var uniform = InstanceUniforms()
+			uniform.model = model
+			uniform.color = color
+			uniform.skipLight = 1
+            self.uniform = uniform
 		}
 
-		public init(center: Vec3, size: Vec3, color: Vec4) {
-			self.center = center
-			self.size = size
-			self.color = color
-		}
-
-		public let center: Vec3
-		public let size: Vec3
 		public let color: Vec4
-		public var model: Matrix { Matrix.translation(center) * Matrix.scale(size) }
+		public let model: Matrix
+		public let center: Vec3
 
+		public let uniform: InstanceUniforms
 		public func mesh(for device: MTLDevice) -> Mesh {
 			return Mesh.cubePrimitive(device)!
-		}
-
-		public var uniform: InstanceUniforms {
-            debugPrint("simple uniform called")
-			var uniforms = InstanceUniforms()
-			uniforms.model = model
-			uniforms.color = color
-			uniforms.skipLight = 1
-			return uniforms
 		}
 	}
 }
