@@ -47,6 +47,7 @@ extension SceneUniforms: WritableIntoBuffer {}
 extension InstanceUniforms: WritableIntoBuffer {}
 
 extension [InstanceUniforms]: WritableIntoBuffer {
+	@discardableResult
 	public func write(into buffer: MTLBuffer, offset: Int = 0) -> Int {
 		let byteCount = self.count * MemoryLayout<InstanceUniforms>.stride
 		self.withUnsafeBufferPointer { bytes in

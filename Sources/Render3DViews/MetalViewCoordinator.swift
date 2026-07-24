@@ -18,7 +18,7 @@ public class MetalViewCoordinator: NSObject, MTKViewDelegate {
 	public func draw(in view: MTKView) {
 		guard let drawable = view.currentDrawable,
 			let renderPassDescriptor = view.currentRenderPassDescriptor,
-			let commandBuffer = renderer.device.makeCommandQueue()?.makeCommandBuffer()
+			let commandBuffer = renderer.commandQueue.makeCommandBuffer()
 		else { return }
 
 		renderer.draw(

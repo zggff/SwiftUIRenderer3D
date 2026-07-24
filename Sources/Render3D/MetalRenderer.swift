@@ -3,7 +3,7 @@ import Render3DShaders
 
 public class MetalRenderer {
 	public let device: MTLDevice!
-	var commandQueue: MTLCommandQueue!
+	public var commandQueue: MTLCommandQueue!
 	let pipeline: MTLRenderPipelineState
 	let depthState: MTLDepthStencilState
 	let oitHandler: OITTransparencyHandler
@@ -91,19 +91,19 @@ public class MetalRenderer {
 
 		renderEncoder.setRenderPipelineState(pipeline)
 
-		if let (instancesBuffer, instructions) = scene.renderInfoOpaque() {
-			camera.uniforms(for: aspect).write(into: cameraBuffer)
-			scene.uniforms.write(into: sceneBuffer)
+		renderEncoder.setDepthStencilState(depthState)
+		camera.uniforms(for: aspect).write(into: cameraBuffer)
+		scene.uniforms.write(into: sceneBuffer)
 
+		if let (instancesBuffer, instructions) = scene.renderInfoOpaque() {
 			renderEncoder.setVertexBuffer(cameraBuffer, offset: 0, index: 1)
 			renderEncoder.setVertexBuffer(sceneBuffer, offset: 0, index: 2)
-
 			renderEncoder.setFragmentBuffer(cameraBuffer, offset: 0, index: 1)
 			renderEncoder.setFragmentBuffer(sceneBuffer, offset: 0, index: 2)
 
-			renderEncoder.setDepthStencilState(depthState)
 			for (mesh, offset, count) in instructions {
-                renderEncoder.setCullMode(mesh.cullMode)
+				guard let mesh else { continue }
+				renderEncoder.setCullMode(mesh.cullMode)
 				renderEncoder.setVertexBuffer(mesh.vertex, offset: 0, index: 0)
 				renderEncoder.setVertexBuffer(instancesBuffer, offset: offset, index: 3)
 				renderEncoder.setFragmentBuffer(instancesBuffer, offset: offset, index: 3)

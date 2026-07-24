@@ -119,6 +119,7 @@ public class OITTransparencyHandler {
 
 		if let (instancesBuffer, instructions) = scene.renderInfoTransparent() {
 			for (mesh, offset, count) in instructions {
+				guard let mesh else { continue }
 				encoder.setCullMode(mesh.cullMode)
 				encoder.setVertexBuffer(mesh.vertex, offset: 0, index: 0)
 				encoder.setVertexBuffer(instancesBuffer, offset: offset, index: 3)

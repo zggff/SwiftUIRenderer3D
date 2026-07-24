@@ -19,8 +19,8 @@ public enum Primitive {
 		public let color: Vec4
 		public var model: Matrix { Matrix.translation(center) * Matrix.scale(size) }
 
-		public func mesh(for device: MTLDevice) -> Mesh {
-			return Mesh.cube(device)!
+		public func mesh(for device: MTLDevice) -> Mesh? {
+			return Mesh.cube(device)
 		}
 	}
 	public struct Sphere: Renderable {
@@ -37,8 +37,8 @@ public enum Primitive {
 			Matrix.translation(center) * Matrix.scale(Vec3(repeating: radius))
 		}
 
-		public func mesh(for device: MTLDevice) -> Mesh {
-			return Mesh.sphere(device, vertex_cnt: 100)!
+		public func mesh(for device: MTLDevice) -> Mesh? {
+			return Mesh.sphere(device, vertex_cnt: 100)
 		}
 	}
 
@@ -60,8 +60,8 @@ public enum Primitive {
 		public let center: Vec3
 
 		public let uniform: InstanceUniforms
-		public func mesh(for device: MTLDevice) -> Mesh {
-			return Mesh.cubePrimitive(device)!
+		public func mesh(for device: MTLDevice) -> Mesh? {
+			return Mesh.cubePrimitive(device)
 		}
 	}
 }

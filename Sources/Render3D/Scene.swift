@@ -3,74 +3,82 @@ import Observation
 import Render3DShaders
 import simd
 
-public typealias DrawInstruction = (Mesh, Int, Int)
+public typealias DrawInstruction = (Mesh?, Int, Int)
 
-@Observable
-public final class Scene3D {
-	public init() {}
+public class ObjectStorage {
+	var cachable: [ObjectIdentifier: [any Renderable]] = [:]
+	var nonCachable: [any Renderable] = []
+	var instructions: [DrawInstruction] = []
+	var shouldUpdate: Bool = false
 
-	public var version = 0
-	public var uniforms: SceneUniforms {
-		SceneUniforms(
-			lightDirection: [0, 1, 0],
-			lightColor: [1, 1, 1],
-			diffuseStrength: 0.0,
-			ambientStrength: 0.8
-		)
+	var count: Int {
+		cachable.values.map(\.count).reduce(0, +) + nonCachable.count
+	}
+	var requiredBufferSize: Int {
+		count * MemoryLayout<InstanceUniforms>.stride
 	}
 
-	private var _device: (any MTLDevice)? = nil
-	public var device: (any MTLDevice)? {
-		get {
-			_device
-		}
-		set {
-			let isNew =
-				switch (self._device, newValue) {
-					case (let deviceOld?, let deviceNew?):
-						ObjectIdentifier(deviceOld as AnyObject)
-							!= ObjectIdentifier(deviceNew as AnyObject)
-					case (nil, nil): false
-					default: true
-				}
-			if isNew {
-				self._buffer = nil
-				self._device = newValue
-				self.meshCache = [:]
+	var buffer: MTLBuffer? = nil
+	func allocBuffer(device: any MTLDevice) {
+		let size = requiredBufferSize
+		guard size > 0 else { return }
+		if let buffer = buffer, buffer.length >= size { return }
+		buffer = device.makeBuffer(length: size)
+	}
+
+	public func append<T: Renderable>(_ objects: [T]) {
+		self.shouldUpdate = true
+		if T.cachable {
+			let id = ObjectIdentifier(T.self)
+			if self.cachable[id] == nil {
+				self.cachable[id] = []
 			}
+			self.cachable[id]?.append(contentsOf: objects)
+		} else {
+			self.nonCachable.append(contentsOf: objects)
 		}
 	}
 
-	private var objects: [ObjectIdentifier: [any Renderable]] = [:]
-	private var objectsNonCachable: [any Renderable] = []
-	private var objectsTransparent: [any Renderable] = []
-
-	private var meshCache: [ObjectIdentifier: Mesh] = [:]
-	private var types: [ObjectIdentifier: Renderable.Type] = [:]
-
-	private var drawInstructions: [DrawInstruction] = []
-	private var shouldUpdate = false
-
-	public var countOpaque: Int {
-		return objects.values.map(\.count).reduce(0, +) + objectsNonCachable.count
-	}
-	public var countTransparent: Int {
-		objectsTransparent.count
-	}
-	public var count: Int {
-		countOpaque + countTransparent
+	public func removeAll() {
+		self.shouldUpdate = true
+		self.cachable.removeAll()
+		self.nonCachable.removeAll()
 	}
 
-	private var _buffer: MTLBuffer? = nil
-	private var buffer: MTLBuffer {
-		let size = count * MemoryLayout<InstanceUniforms>.stride
-		if _buffer?.length ?? 0 < size {
-			_buffer = device!.makeBuffer(length: size)
+	func createDrawInstructions(cache: MeshCache) {
+		guard shouldUpdate else { return }
+		allocBuffer(device: cache.device)
+		guard let buffer else { return }
+
+		shouldUpdate = false
+		instructions.removeAll()
+		var offset = 0
+		for objects in cachable.values {
+			guard let first = objects.first else { continue }
+			let mesh = cache.mesh(for: first)
+			instructions.append((mesh, offset, objects.count))
+			offset += objects.map(\.uniform).write(into: buffer, offset: offset)
 		}
-		return _buffer!
+		guard nonCachable.count > 0 else { return }
+
+		nonCachable.map(\.uniform).write(into: buffer, offset: offset)
+		for (i, object) in nonCachable.enumerated() {
+			let mesh = cache.mesh(for: object)
+			instructions.append((mesh, offset + i * MemoryLayout<InstanceUniforms>.stride, 1))
+		}
+	}
+}
+
+class MeshCache {
+	var meshCache: [ObjectIdentifier: Mesh] = [:]
+	var device: any MTLDevice
+
+	init?(for device: MTLDevice?) {
+		guard let device = device else { return nil }
+		self.device = device
 	}
 
-	private func mesh(_ device: MTLDevice, _ obj: any Renderable) -> Mesh {
+	func mesh(for obj: any Renderable) -> Mesh? {
 		let objType = type(of: obj)
 		guard objType.cachable else {
 			return obj.mesh(for: device)
@@ -83,93 +91,62 @@ public final class Scene3D {
 		}
 		return mesh
 	}
+}
 
-	public func finishDeclaration() {
-		version += 1
-	}
+public final class Scene3D {
+	public init() {}
 
-	public func append<T: Renderable>(objects: [T]) {
-		self.shouldUpdate = true
-		if T.cachable {
-			let id = ObjectIdentifier(T.self)
-			if self.objects[id] == nil {
-				self.objects[id] = []
-				self.types[id] = T.self
-			}
-			self.objects[id]?.append(contentsOf: objects)
-		} else {
-			self.objectsNonCachable.append(contentsOf: objects)
+	public let opaque: ObjectStorage = ObjectStorage()
+	public let transparent: ObjectStorage = ObjectStorage()
+
+	public var uniforms: SceneUniforms = SceneUniforms(
+		lightDirection: [0, 1, 0],
+		lightColor: [1, 1, 1],
+		diffuseStrength: 0.0,
+		ambientStrength: 0.8
+	)
+
+	private var cache: MeshCache? = nil
+	public var device: (any MTLDevice)? = nil {
+		didSet {
+			guard (device as AnyObject?) !== (oldValue as AnyObject?) else { return }
+
+			opaque.buffer = nil
+			transparent.buffer = nil
+			cache = MeshCache(for: device)
 		}
 	}
 
-	public func appendTransparent<T: Renderable>(objects: [T]) {
-		self.objectsTransparent.append(contentsOf: objects)
+	public var count: Int {
+		opaque.count + transparent.count
+	}
+
+	public var onFinishDeclaration: (() -> Void)?
+	public func finishDeclaration() {
+		onFinishDeclaration?()
 	}
 
 	public func removeAll() {
-		self.shouldUpdate = true
-		self.objects = [:]
-		self.objectsNonCachable = []
-	}
-
-	public func cleanup() {
-		self.shouldUpdate = true
-		self.meshCache = [:]
-	}
-
-	private func update() {
-		guard let device else { return }
-
-		self.drawInstructions.removeAll()
-		var offset = 0
-		for objects in objects.values {
-			drawInstructions.append((mesh(device, objects.first!), offset, objects.count))
-			offset += objects.map(\.uniform).write(into: buffer, offset: offset)
-		}
-		guard objectsNonCachable.count > 0 else { return }
-
-		_ = objectsNonCachable.map(\.uniform).write(into: buffer, offset: offset)
-		for (i, object) in objectsNonCachable.enumerated() {
-			let mesh = object.mesh(for: device)
-			drawInstructions.append((mesh, offset + i * MemoryLayout<InstanceUniforms>.stride, 1))
-		}
+		self.transparent.removeAll()
+		self.opaque.removeAll()
 	}
 
 	func renderInfoOpaque() -> (MTLBuffer, [DrawInstruction])? {
-		guard let _ = device else {
-			fatalError("device must be set")
-		}
-
-		guard count > 0 else {
+		guard let cache else {
 			return nil
 		}
-		if !shouldUpdate {
-			return (buffer, drawInstructions)
-		}
-
-		shouldUpdate = false
-		update()
-		return (buffer, self.drawInstructions)
+		opaque.createDrawInstructions(cache: cache)
+		guard let buffer = opaque.buffer else { return nil }
+		return (buffer, opaque.instructions)
 	}
 
 	func renderInfoTransparent() -> (MTLBuffer, [DrawInstruction])? {
-		guard let device else {
-			fatalError("device must be set")
-		}
-
-		guard countTransparent > 0 else {
+		guard let cache else {
 			return nil
 		}
-
-		let offset = countOpaque * MemoryLayout<InstanceUniforms>.stride
-		let instances = objectsTransparent.map(\.uniform)
-		_ = instances.write(into: buffer, offset: offset)
-
-		let instructions = objectsTransparent.enumerated().map { (i, obj) in
-			(mesh(device, obj), offset + i * MemoryLayout<InstanceUniforms>.stride, 1)
-		}
-
-		return (buffer, instructions)
+		transparent.createDrawInstructions(cache: cache)
+		guard let buffer = transparent.buffer else { return nil }
+		return (buffer, transparent.instructions)
 	}
 
 	public func draw(_ content: (Context) -> Void) {
@@ -183,14 +160,17 @@ public final class Scene3D {
 		fileprivate var scene: Scene3D
 
 		public func draw<T: Renderable>(_ objects: [T]) {
-			scene.append(objects: objects)
+			scene.opaque.append(objects.filter(\.opaque))
+			scene.transparent.append(objects.filter(\.transparent))
 		}
 		public func draw<T: Renderable>(_ object: T) {
-			scene.append(objects: [object])
+			draw(_: [object])
 		}
 		public func drawTransparent<T: Renderable>(_ objects: [T]) {
-			scene.appendTransparent(objects: objects)
+			scene.transparent.append(objects)
+		}
+		public func drawOpaque<T: Renderable>(_ objects: [T]) {
+			scene.opaque.append(objects)
 		}
 	}
-
 }

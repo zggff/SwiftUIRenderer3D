@@ -2,14 +2,14 @@ import MetalKit
 @_exported import Render3D
 import SwiftUI
 
-#if os(macOS)
+#if canImport(AppKit)
 	public typealias NativeView = NSView
 	public typealias NativeApplication = NSApplication
 	public typealias ViewRepresentable = NSViewRepresentable
 	public typealias ViewRepresentableContext = NSViewRepresentableContext
 	public typealias ViewControllerRepresentable = NSViewControllerRepresentable
 
-#elseif os(iOS)
+#elseif canImport(UIKit)
 	public typealias NativeView = UIView
 	public typealias NativeApplication = UIApplication
 	public typealias ViewRepresentable = UIViewRepresentable
@@ -43,7 +43,7 @@ public struct MetalView: ViewRepresentable {
 		self.backgroundColor = backgroundColor
 		self.camera = camera
 		self.scene = scene
-        self.scene.device = Self.device
+		self.scene.device = Self.device
 		self.onScroll = onScroll
 	}
 
@@ -60,6 +60,7 @@ public struct MetalView: ViewRepresentable {
 		mtkView.clearColor = backgroundColor
 
 		mtkView.scrollHandler = onScroll
+
 		return mtkView
 	}
 
@@ -77,16 +78,25 @@ public struct MetalView: ViewRepresentable {
 		#endif
 	}
 
+	@inline(always)
+	static func updateView(_ view: MTKView?) {
+		#if canImport(AppKit)
+			view?.needsDisplay = true
+		#elseif canImport(UIKit)
+			view?.setNeedsDisplay()
+		#endif
+	}
+
 	public func updateNSView(_ uiView: MTKView, context: ViewRepresentableContext<MetalView>) {
-		_ = scene.version
 		uiView.clearColor = backgroundColor
 		context.coordinator.parent = self
 
-		#if os(macOS)
-			uiView.needsDisplay = true
-		#elseif os(iOS)
-			uiView.setNeedsDisplay()
-		#endif
+		scene.onFinishDeclaration = { [weak uiView] in
+			Self.updateView(uiView)
+		}
+
+		Self.updateView(uiView)
+
 	}
 
 	public func makeUIView(context: ViewRepresentableContext<MetalView>) -> MTKView {

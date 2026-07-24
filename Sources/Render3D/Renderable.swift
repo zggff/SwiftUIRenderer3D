@@ -9,11 +9,14 @@ public protocol Renderable {
 	var center: Vec3 { get }
 	var uniform: InstanceUniforms { get }
 
-	func mesh(for device: MTLDevice) -> Mesh
+	func mesh(for device: MTLDevice) -> Mesh?
 	static var cachable: Bool { get }
 }
 
 extension Renderable {
+    public var opaque: Bool {color.w == 1}
+    public var transparent: Bool {color.w < 1}
+
 	public var uniform: InstanceUniforms {
 		var uniforms = InstanceUniforms()
 		uniforms.model = model
