@@ -2,9 +2,9 @@ import Render3DShaders
 import simd
 
 public struct Camera {
-	let position: Vec3
-	let up: Vec3
-	let target: Vec3
+	public let position: Vec3
+	public let up: Vec3
+	public let target: Vec3
 
 	public init(position: Vec3, target: Vec3, up: Vec3) {
 		self.position = position

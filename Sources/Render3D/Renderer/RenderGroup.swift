@@ -13,10 +13,4 @@ public final class RenderGroup {
 		self.order = order
 		self.rendererType = renderer
 	}
-
-	func initRenderer(device: MTLDevice) {
-		if self.renderer == nil {
-			self.renderer = self.rendererType.init(device: device)
-		}
-	}
 }

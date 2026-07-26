@@ -1,7 +1,7 @@
 import Metal
 
 public protocol MetalRenderer: AnyObject {
-	init(device: any MTLDevice)
+	init(device: any MTLDevice) throws
 	func update(drawableSize size: CGSize)
 	func draw(context: RenderContext, group: RenderGroup)
 }
@@ -75,10 +75,10 @@ public class Renderer {
 		}
 	}
 
-	public func initRenderers(scene: Scene3D) {
+	public func initRenderers(scene: Scene3D) throws {
 		for g in scene.renderGroups {
 			if g.renderer == nil {
-				g.initRenderer(device: device)
+                g.renderer = try? g.rendererType.init(device: device)
 				g.renderer?.update(drawableSize: size)
 			}
 		}
@@ -106,8 +106,8 @@ public class Renderer {
 		camera: Camera,
 		renderPassDescriptor: MTLRenderPassDescriptor,
 		commandBuffer: MTLCommandBuffer,
-	) {
-		initRenderers(scene: scene)
+	) throws {
+		try initRenderers(scene: scene)
 
 		guard let depthTexture else { return }
 
@@ -121,7 +121,7 @@ public class Renderer {
 			cameraBuffer: cameraBuffer, sceneBuffer: sceneBuffer,
 			cache: meshCache)
 
-		for g in scene.renderGroups {
+		for g in scene.renderGroups.sorted(by: { a, b in a.order < b.order }) {
 			g.renderer?.draw(context: context, group: g)
 		}
 	}

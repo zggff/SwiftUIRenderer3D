@@ -31,7 +31,7 @@ public class MetalViewCoordinator: NSObject, MTKViewDelegate {
 			renderer.update(drawableSize: view.drawableSize)
 		}
 
-		renderer.draw(
+		try? renderer.draw(
 			scene: parent.scene, camera: parent.camera,
 			renderPassDescriptor: renderPassDescriptor,
 			commandBuffer: commandBuffer)

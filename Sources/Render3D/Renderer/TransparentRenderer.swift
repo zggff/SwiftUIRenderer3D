@@ -10,14 +10,15 @@ public class TransparentRenderer: MetalRenderer {
 	private let compositionPipelineState: MTLRenderPipelineState
 	private let depthStateTransparent: MTLDepthStencilState
 
-	public required init(device: MTLDevice) {
+	public required init(device: MTLDevice) throws {
 		self.device = device
 
-		let library = try! device.makeDefaultLibrary(bundle: .render3DShaders)
+        let library = try Library(type: .builtin, for: device)
 
 		let accumDesc = MTLRenderPipelineDescriptor()
-		accumDesc.vertexFunction = library.makeFunction(name: "vertexMain")
-		accumDesc.fragmentFunction = library.makeFunction(name: "oitAccumulationFragment")
+
+		accumDesc.vertexFunction = try library.makeFunction(name: "vertexMain")
+		accumDesc.fragmentFunction = try library.makeFunction(name: "oitAccumulationFragment")
 		accumDesc.depthAttachmentPixelFormat = .depth32Float
 		accumDesc.vertexDescriptor = Vertex.defaultLayout
 
@@ -36,11 +37,11 @@ public class TransparentRenderer: MetalRenderer {
 		accumDesc.colorAttachments[1].destinationRGBBlendFactor = .oneMinusSourceColor
 		accumDesc.colorAttachments[1].rgbBlendOperation = .add
 
-		self.accumulationPipelineState = try! device.makeRenderPipelineState(descriptor: accumDesc)
+		self.accumulationPipelineState = try device.makeRenderPipelineState(descriptor: accumDesc)
 
 		let compDesc = MTLRenderPipelineDescriptor()
-		compDesc.vertexFunction = library.makeFunction(name: "oitCompositeVertex")
-		compDesc.fragmentFunction = library.makeFunction(name: "oitCompositeFragment")
+		compDesc.vertexFunction = try library.makeFunction(name: "oitCompositeVertex")
+		compDesc.fragmentFunction = try library.makeFunction(name: "oitCompositeFragment")
 		compDesc.colorAttachments[0].pixelFormat = .bgra8Unorm
 		compDesc.colorAttachments[0].isBlendingEnabled = true
 		compDesc.colorAttachments[0].sourceRGBBlendFactor = .sourceAlpha
@@ -50,7 +51,7 @@ public class TransparentRenderer: MetalRenderer {
 		compDesc.colorAttachments[0].destinationAlphaBlendFactor = .oneMinusSourceAlpha
 		compDesc.colorAttachments[0].alphaBlendOperation = .add
 
-		self.compositionPipelineState = try! device.makeRenderPipelineState(descriptor: compDesc)
+		self.compositionPipelineState = try device.makeRenderPipelineState(descriptor: compDesc)
 
 		let depthDesc = MTLDepthStencilDescriptor()
 		depthDesc.depthCompareFunction = .less

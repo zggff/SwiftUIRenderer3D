@@ -6,20 +6,16 @@ public class OpaqueRenderer: MetalRenderer {
 	public let device: any MTLDevice
 	let pipeline: MTLRenderPipelineState
 	let depthState: MTLDepthStencilState
+	let library: Library
 
-	public required init(device: any MTLDevice) {
+	public required init(device: any MTLDevice) throws {
 		self.device = device
 
 		let pipelineDescriptor = MTLRenderPipelineDescriptor()
-		let library: MTLLibrary
-		do {
-			library = try device.makeDefaultLibrary(bundle: .render3DShaders)
-		} catch {
-			fatalError("Failed to load Renderer3D Metal library: \(error)")
-		}
+		library = try Library(type: .builtin, for: device)
 
-		pipelineDescriptor.vertexFunction = library.makeFunction(name: "vertexMain")
-		pipelineDescriptor.fragmentFunction = library.makeFunction(name: "fragmentMain")
+		pipelineDescriptor.vertexFunction = try library.makeFunction(name: "vertexMain")
+		pipelineDescriptor.fragmentFunction = try library.makeFunction(name: "fragmentMain")
 		pipelineDescriptor.depthAttachmentPixelFormat = .depth32Float
 		pipelineDescriptor.vertexDescriptor = Vertex.defaultLayout
 
@@ -32,7 +28,7 @@ public class OpaqueRenderer: MetalRenderer {
 		pipelineDescriptor.colorAttachments[0].destinationAlphaBlendFactor = .oneMinusSourceAlpha
 		pipelineDescriptor.colorAttachments[0].alphaBlendOperation = .add
 
-		self.pipeline = try! device.makeRenderPipelineState(descriptor: pipelineDescriptor)
+		self.pipeline = try device.makeRenderPipelineState(descriptor: pipelineDescriptor)
 
 		let depthDescriptor = MTLDepthStencilDescriptor()
 		depthDescriptor.depthCompareFunction = .less
