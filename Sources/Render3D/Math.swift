@@ -70,7 +70,7 @@ extension Matrix {
 		)
 	}
 
-	public static func look_at(eye: Vec3, target: Vec3, up: Vec3) -> Matrix {
+	public static func lookAt(eye: Vec3, target: Vec3, up: Vec3) -> Matrix {
 		let forward = normalize(target - eye)
 		let right = normalize(cross(up, forward))
 		let trueUp = cross(forward, right)

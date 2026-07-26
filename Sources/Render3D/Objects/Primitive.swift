@@ -38,7 +38,7 @@ public enum Primitive {
 		}
 
 		public func mesh(for device: MTLDevice) -> Mesh? {
-			return Mesh.sphere(device, vertex_cnt: 100)
+			return Mesh.sphere(device, vertexCnt: 100)
 		}
 	}
 

@@ -33,13 +33,15 @@ public struct OrbitingSceneView: View {
 			camera: Camera(
 				pitch: cameraState.pitch.degrees, yaw: cameraState.yaw.degrees,
 				radius: cameraState.distance,
-				look_at: cameraCenter,
+				lookAt: cameraCenter,
 				origin: cameraCenter),
 			scene: scene,
 			onScroll: { deltaY in
 				cameraState.distance = max(minDistance, cameraState.distance - Float(deltaY))
 			}
-		).gesture(
+		)
+		.withErrorOverlay()
+		.gesture(
 			DragGesture()
 				.onChanged { value in
 					self.cameraState.yaw += Float(value.velocity.width) / 100

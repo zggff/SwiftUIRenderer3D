@@ -27,14 +27,19 @@ public class MetalViewCoordinator: NSObject, MTKViewDelegate {
 		else { return }
 
 		if needsSizeUpdate {
-            needsSizeUpdate = false
+			needsSizeUpdate = false
 			renderer.update(drawableSize: view.drawableSize)
 		}
 
-		try? renderer.draw(
-			scene: parent.scene, camera: parent.camera,
-			renderPassDescriptor: renderPassDescriptor,
-			commandBuffer: commandBuffer)
+		do {
+			try renderer.draw(
+				scene: parent.scene, camera: parent.camera,
+				renderPassDescriptor: renderPassDescriptor,
+				commandBuffer: commandBuffer)
+			parent.onError?(nil)
+		} catch {
+			parent.onError?(error)
+		}
 
 		commandBuffer.present(drawable)
 		commandBuffer.commit()

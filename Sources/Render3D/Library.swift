@@ -10,9 +10,20 @@ public struct Library {
 		case custom(Bundle)
 	}
 
-	public enum Error: Swift.Error {
+	public enum Error: Swift.Error, LocalizedError {
 		case NoLibrary
 		case NoFunction(String)
+
+		public var errorDescription: String? {
+			switch self {
+				case .NoLibrary:
+					return
+						"Failed to load the default Metal library. Make sure your .metal shader files are included in the target's build phases."
+				case .NoFunction(let name):
+					return
+						"Could not find a compiled Metal function named '\(name)' in the current library."
+			}
+		}
 	}
 
 	init(type: LType, for device: any MTLDevice) throws {

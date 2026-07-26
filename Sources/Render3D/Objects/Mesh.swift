@@ -122,18 +122,18 @@ public struct Mesh: @unchecked Sendable {
 		return Mesh(device, vertices: vertices, indices: indices)
 	}
 
-	public static func sphere(_ device: MTLDevice, vertex_cnt: UInt16 = 100) -> Mesh? {
+	public static func sphere(_ device: MTLDevice, vertexCnt: UInt16 = 100) -> Mesh? {
 		var vertices: [Vertex] = []
 		var indices: [UInt16] = []
 		let radius: Float = 0.5
 
-		for i in 0...vertex_cnt {
-			let stackAngle = Float.pi / 2.0 - Float(i) * Float.pi / Float(vertex_cnt)
+		for i in 0...vertexCnt {
+			let stackAngle = Float.pi / 2.0 - Float(i) * Float.pi / Float(vertexCnt)
 			let xy = radius * cosf(stackAngle)
 			let y = radius * sinf(stackAngle)
 
-			for j in 0...vertex_cnt {
-				let sectorAngle = Float(j * 2) * Float.pi / Float(vertex_cnt)
+			for j in 0...vertexCnt {
+				let sectorAngle = Float(j * 2) * Float.pi / Float(vertexCnt)
 				let x = xy * cosf(sectorAngle)
 				let z = xy * sinf(sectorAngle)
 
@@ -142,17 +142,17 @@ public struct Mesh: @unchecked Sendable {
 				vertices.append(Vertex(position: pos, normal: norm))
 			}
 		}
-		for i in 0..<vertex_cnt {
-			var k1 = i * (vertex_cnt + 1)
-			var k2 = k1 + vertex_cnt + 1
+		for i in 0..<vertexCnt {
+			var k1 = i * (vertexCnt + 1)
+			var k2 = k1 + vertexCnt + 1
 
-			for _ in 0..<vertex_cnt {
+			for _ in 0..<vertexCnt {
 				if i != 0 {
 					indices.append(k1)
 					indices.append(k1 + 1)
 					indices.append(k2)
 				}
-				if i != (vertex_cnt - 1) {
+				if i != (vertexCnt - 1) {
 					indices.append(k1 + 1)
 					indices.append(k2 + 1)
 					indices.append(k2)

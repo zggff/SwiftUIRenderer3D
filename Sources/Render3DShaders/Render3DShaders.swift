@@ -67,7 +67,7 @@ extension Bundle {
 
 extension MTLBuffer {
 	@discardableResult
-	public func write<S: Sequence, U>(
+	public func write<S: Collection, U>(
 		_ objects: S,
 		offset: Int = 0,
 		transform: (S.Element) -> U

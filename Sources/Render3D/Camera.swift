@@ -13,18 +13,18 @@ public struct Camera {
 	}
 
 	public init(
-		pitch: Float, yaw: Float, radius: Float, look_at: Vec3,
+		pitch: Float, yaw: Float, radius: Float, lookAt: Vec3,
 		origin: Vec3
 	) {
 		self.position =
 			Vec3(radius, pitch, yaw).polar
 			+ origin
-		self.target = look_at
+		self.target = lookAt
 		self.up = [-sin(pitch) * sin(yaw), cos(pitch), -sin(pitch) * cos(yaw)]
 	}
 
 	var view: Matrix {
-		return Matrix.look_at(eye: position, target: target, up: up)
+		return Matrix.lookAt(eye: position, target: target, up: up)
 	}
 
 	public func uniforms(for aspect: Float) -> CameraUniforms {

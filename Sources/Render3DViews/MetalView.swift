@@ -22,7 +22,8 @@ public struct MetalView: ViewRepresentable {
 	let camera: Camera
 	var scene: Scene3D
 
-	var onScroll: ((CGFloat) -> Void)? = nil
+	var onScroll: ((CGFloat) -> Void)?
+	var onError: ((Error?) -> Void)?
 
 	private static let device: MTLDevice = {
 		guard let device = MTLCreateSystemDefaultDevice() else {
@@ -38,12 +39,14 @@ public struct MetalView: ViewRepresentable {
 		backgroundColor: MTLClearColor,
 		camera: Camera,
 		scene: Scene3D,
-		onScroll: ((CGFloat) -> Void)? = nil
+		onScroll: ((CGFloat) -> Void)? = nil,
+        onError: ((Error?) -> Void)? = nil
 	) {
 		self.backgroundColor = backgroundColor
 		self.camera = camera
 		self.scene = scene
 		self.onScroll = onScroll
+		self.onError = onError
 	}
 
 	public func makeNSView(context: ViewRepresentableContext<MetalView>) -> MTKView {

@@ -57,8 +57,16 @@ public class Renderer {
 	var depthTexture: MTLTexture?
 	var meshCache: MeshCache
 
-	var renderGroups: [RenderGroup] = []
+	var renderers: [String: (any MetalRenderer)] = [:]
 	var size: CGSize = CGSize(width: 1, height: 1)
+
+	public struct Error: Swift.Error, LocalizedError {
+		public let id: String
+		public let error: Swift.Error
+		public var errorDescription: String? {
+			return "[\(id)] \(error.localizedDescription)"
+		}
+	}
 
 	public required init(device: any MTLDevice) {
 		self.device = device
@@ -67,20 +75,25 @@ public class Renderer {
 		self.meshCache = MeshCache(device: device)
 	}
 
-	public func update(drawableSize size: CGSize) {
-		updateDepthTexture(size: size)
-		self.size = size
-		for g in renderGroups {
-			g.renderer?.update(drawableSize: size)
+	public func prepare(for scene: Scene3D) throws {
+		for g in scene.renderGroups {
+			if renderers[g.id] == nil {
+				do { renderers[g.id] = try g.rendererType.init(device: device) } catch {
+					throw Self.Error(id: g.id, error: error)
+				}
+			}
 		}
 	}
 
-	public func initRenderers(scene: Scene3D) throws {
-		for g in scene.renderGroups {
-			if g.renderer == nil {
-                g.renderer = try? g.rendererType.init(device: device)
-				g.renderer?.update(drawableSize: size)
-			}
+	public func prepared(for scene: Scene3D) -> Bool {
+		return scene.renderGroups.allSatisfy({ g in renderers.keys.contains(g.id) })
+	}
+
+	public func update(drawableSize size: CGSize) {
+		updateDepthTexture(size: size)
+		self.size = size
+		for renderer in renderers.values {
+			renderer.update(drawableSize: size)
 		}
 	}
 
@@ -107,7 +120,8 @@ public class Renderer {
 		renderPassDescriptor: MTLRenderPassDescriptor,
 		commandBuffer: MTLCommandBuffer,
 	) throws {
-		try initRenderers(scene: scene)
+		try prepare(for: scene)
+		update(drawableSize: size)
 
 		guard let depthTexture else { return }
 
@@ -122,7 +136,8 @@ public class Renderer {
 			cache: meshCache)
 
 		for g in scene.renderGroups.sorted(by: { a, b in a.order < b.order }) {
-			g.renderer?.draw(context: context, group: g)
+			guard let renderer = renderers[g.id] else { continue }
+			renderer.draw(context: context, group: g)
 		}
 	}
 }
