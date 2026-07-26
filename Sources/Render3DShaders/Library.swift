@@ -1,5 +1,4 @@
 import Metal
-import Render3DShaders
 
 public struct Library {
 	let library: MTLLibrary
@@ -26,7 +25,7 @@ public struct Library {
 		}
 	}
 
-	init(type: LType, for device: any MTLDevice) throws {
+	public init(type: LType, for device: any MTLDevice) throws {
 		switch type {
 			case .builtin: library = try device.makeDefaultLibrary(bundle: .render3DShaders)
 			case .main:
@@ -39,7 +38,7 @@ public struct Library {
 
 	}
 
-	func makeFunction(name: String) throws -> MTLFunction {
+	public func makeFunction(name: String) throws -> MTLFunction {
 		guard let fun = library.makeFunction(name: name) else {
 			throw Error.NoFunction(name)
 		}

@@ -4,7 +4,12 @@ import Render3DShaders
 import simd
 
 public final class Scene3D {
-	public init() {}
+	public init(renderGroups: [RenderGroup]? = nil) {
+		if let renderGroups {
+			self.renderGroups = renderGroups
+		}
+	}
+
 	public private(set) var renderGroups: [RenderGroup] = [
 		RenderGroup(id: "builtin.opaque", order: 0, renderer: OpaqueRenderer.self),
 		RenderGroup(id: "builtin.transparent", order: 100, renderer: TransparentRenderer.self),
