@@ -43,7 +43,6 @@ public struct MetalView: ViewRepresentable {
 		self.backgroundColor = backgroundColor
 		self.camera = camera
 		self.scene = scene
-		self.scene.device = Self.device
 		self.onScroll = onScroll
 	}
 

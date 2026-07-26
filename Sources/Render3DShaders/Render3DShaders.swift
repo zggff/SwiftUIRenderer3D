@@ -64,3 +64,28 @@ extension [InstanceUniforms]: WritableIntoBuffer {
 extension Bundle {
 	public static var render3DShaders: Bundle { .module }
 }
+
+extension MTLBuffer {
+	@discardableResult
+	public func write<S: Sequence, U>(
+		_ objects: S,
+		offset: Int = 0,
+		transform: (S.Element) -> U
+	) -> Int {
+		let stride = MemoryLayout<U>.stride
+		let pointer = self.contents()
+			.advanced(by: offset)
+			.assumingMemoryBound(to: U.self)
+
+		let bufferPointer = UnsafeMutableBufferPointer(
+			start: pointer, count: objects.underestimatedCount)
+
+		var count = 0
+		for (index, object) in objects.enumerated() {
+			bufferPointer[index] = transform(object)
+			count += 1
+		}
+
+		return count * stride
+	}
+}

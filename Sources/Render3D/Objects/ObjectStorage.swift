@@ -6,9 +6,9 @@ public class ObjectStorage {
 	var instructions: [DrawInstruction] = []
 	var shouldUpdate: Bool = false
 
-	var count: Int {
-		cachable.values.map(\.count).reduce(0, +) + nonCachable.count
-	}
+	private var objectCount: Int = 0
+	var count: Int { objectCount }
+
 	var requiredBufferSize: Int {
 		count * MemoryLayout<InstanceUniforms>.stride
 	}
@@ -22,22 +22,29 @@ public class ObjectStorage {
 	}
 
 	public func append<T: Renderable>(_ objects: [T]) {
-		self.shouldUpdate = true
+		guard !objects.isEmpty else { return }
+		shouldUpdate = true
+		objectCount += objects.count
+
 		if T.cachable {
 			let id = ObjectIdentifier(T.self)
-			if self.cachable[id] == nil {
-				self.cachable[id] = []
+			if cachable[id] == nil {
+				cachable[id] = []
 			}
-			self.cachable[id]?.append(contentsOf: objects)
+			cachable[id]?.append(contentsOf: objects)
 		} else {
-			self.nonCachable.append(contentsOf: objects)
+			nonCachable.append(contentsOf: objects)
 		}
 	}
 
 	public func removeAll() {
-		self.shouldUpdate = true
-		self.cachable.removeAll()
-		self.nonCachable.removeAll()
+		shouldUpdate = true
+		objectCount = 0
+
+		for index in cachable.values.indices {
+			cachable.values[index].removeAll(keepingCapacity: true)
+		}
+		nonCachable.removeAll(keepingCapacity: true)
 	}
 
 	func renderInfo(cache: MeshCache) -> (MTLBuffer, [DrawInstruction])? {
@@ -52,20 +59,24 @@ public class ObjectStorage {
 		guard let buffer else { return }
 
 		shouldUpdate = false
-		instructions.removeAll()
+		instructions.removeAll(keepingCapacity: true)
+
 		var offset = 0
 		for objects in cachable.values {
 			guard let first = objects.first else { continue }
 			let mesh = cache.mesh(for: first)
 			instructions.append((mesh, offset, objects.count))
-			offset += objects.map(\.uniform).write(into: buffer, offset: offset)
-		}
-		guard nonCachable.count > 0 else { return }
+			offset += buffer.write(objects, offset: offset, transform: (\.uniform))
 
-		nonCachable.map(\.uniform).write(into: buffer, offset: offset)
-		for (i, object) in nonCachable.enumerated() {
-			let mesh = cache.mesh(for: object)
-			instructions.append((mesh, offset + i * MemoryLayout<InstanceUniforms>.stride, 1))
 		}
+
+		guard !nonCachable.isEmpty else { return }
+
+		for (index, object) in nonCachable.enumerated() {
+			let mesh = cache.mesh(for: object)
+			let instanceOffset = offset + index * MemoryLayout<InstanceUniforms>.stride
+			instructions.append((mesh, instanceOffset, 1))
+		}
+		offset += buffer.write(nonCachable, offset: offset, transform: (\.uniform))
 	}
 }

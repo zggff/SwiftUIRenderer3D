@@ -21,13 +21,6 @@ public final class Scene3D {
 		ambientStrength: 0.8
 	)
 
-	private var cache: MeshCache? = nil
-	public var device: (any MTLDevice)? = nil {
-		didSet {
-			guard (device as AnyObject?) !== (oldValue as AnyObject?) else { return }
-		}
-	}
-
 	public var onFinishDeclaration: (() -> Void)?
 	public func finishDeclaration() {
 		onFinishDeclaration?()
@@ -65,7 +58,7 @@ public final class Scene3D {
 			scene.storage(for: id)?.append(objects)
 		}
 		public func draw<T: Renderable>(_ object: T, in id: String) {
-			draw([object])
+			draw([object], in: id)
 		}
 
 	}
