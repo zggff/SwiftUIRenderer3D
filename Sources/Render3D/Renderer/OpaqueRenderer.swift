@@ -1,20 +1,15 @@
 import Metal
 import Render3DShaders
 
-public class MetalRenderer {
-	public let device: MTLDevice!
-	public var commandQueue: MTLCommandQueue!
+public class OpaqueRenderer: MetalRenderer {
+
+	public let device: any MTLDevice
 	let pipeline: MTLRenderPipelineState
 	let depthState: MTLDepthStencilState
-	let oitHandler: OITTransparencyHandler
+	// let oitHandler: OITTransparencyHandler
 
-	var sceneBuffer: MTLBuffer
-	var cameraBuffer: MTLBuffer
-	var depthTexture: MTLTexture?
-
-	public init(device: MTLDevice = MTLCreateSystemDefaultDevice()!) {
+	public required init(device: any MTLDevice) {
 		self.device = device
-		self.commandQueue = device.makeCommandQueue()
 
 		let pipelineDescriptor = MTLRenderPipelineDescriptor()
 		let library: MTLLibrary
@@ -45,39 +40,24 @@ public class MetalRenderer {
 		depthDescriptor.isDepthWriteEnabled = true
 		self.depthState = device.makeDepthStencilState(descriptor: depthDescriptor)!
 
-		self.oitHandler = OITTransparencyHandler(device: device, colorPixelFormat: .bgra8Unorm)
-		self.cameraBuffer = CameraUniforms.allocateBuffer(for: device)!
-		self.sceneBuffer = SceneUniforms.allocateBuffer(for: device)!
+		// self.oitHandler = OITTransparencyHandler(device: device, colorPixelFormat: .bgra8Unorm)
+		// self.cameraBuffer = CameraUniforms.allocateBuffer(for: device)!
+		// self.sceneBuffer = SceneUniforms.allocateBuffer(for: device)!
 	}
 
-	private func updateDepthTexture(size: CGSize) {
-		let width = Int(size.width)
-		let height = Int(size.height)
-		guard width > 0 && height > 0 else { return }
-
-		if depthTexture?.width != width || depthTexture?.height != height {
-			let desc = MTLTextureDescriptor()
-			desc.textureType = .type2D
-			desc.pixelFormat = .depth32Float
-			desc.width = width
-			desc.height = height
-			desc.storageMode = .private
-			desc.usage = [.renderTarget, .shaderRead]
-			depthTexture = device.makeTexture(descriptor: desc)
-		}
-	}
+	func update(drawableSize size: CGSize) {}
 
 	public func draw(
 		scene: Scene3D,
 		camera: Camera,
-		viewportSize: CGSize,
 		renderPassDescriptor: MTLRenderPassDescriptor,
-		commandBuffer: MTLCommandBuffer
-	) {
-		updateDepthTexture(size: viewportSize)
-		guard let depthTexture else { return }
+		commandBuffer: MTLCommandBuffer,
+		depthTexture: MTLTexture,
+		buffers: [(Int, MTLBuffer)]
 
-		let aspect = Float(viewportSize.width) / Float(viewportSize.height)
+	) {
+		// updateDepthTexture(size: viewportSize)
+		// guard let depthTexture else { return }
 
 		renderPassDescriptor.depthAttachment.texture = depthTexture
 		renderPassDescriptor.depthAttachment.clearDepth = 1.0
@@ -92,14 +72,17 @@ public class MetalRenderer {
 		renderEncoder.setRenderPipelineState(pipeline)
 
 		renderEncoder.setDepthStencilState(depthState)
-		camera.uniforms(for: aspect).write(into: cameraBuffer)
-		scene.uniforms.write(into: sceneBuffer)
+
+		for (index, buffer) in buffers {
+			renderEncoder.setVertexBuffer(buffer, offset: 0, index: index)
+			renderEncoder.setFragmentBuffer(buffer, offset: 0, index: index)
+		}
 
 		if let (instancesBuffer, instructions) = scene.renderInfoOpaque() {
-			renderEncoder.setVertexBuffer(cameraBuffer, offset: 0, index: 1)
-			renderEncoder.setVertexBuffer(sceneBuffer, offset: 0, index: 2)
-			renderEncoder.setFragmentBuffer(cameraBuffer, offset: 0, index: 1)
-			renderEncoder.setFragmentBuffer(sceneBuffer, offset: 0, index: 2)
+			// renderEncoder.setVertexBuffer(cameraBuffer, offset: 0, index: 1)
+			// renderEncoder.setVertexBuffer(sceneBuffer, offset: 0, index: 2)
+			// renderEncoder.setFragmentBuffer(cameraBuffer, offset: 0, index: 1)
+			// renderEncoder.setFragmentBuffer(sceneBuffer, offset: 0, index: 2)
 
 			for (mesh, offset, count) in instructions {
 				guard let mesh else { continue }
@@ -116,15 +99,15 @@ public class MetalRenderer {
 		}
 
 		renderEncoder.endEncoding()
-		oitHandler.draw(
-			commandBuffer: commandBuffer,
-			renderPassDescriptor: renderPassDescriptor,
-			viewportSize: viewportSize,
-			scene: scene,
-			cameraPosition: camera.position,
-			cameraBuffer: cameraBuffer,
-			sceneBuffer: sceneBuffer,
-			depthTexture: depthTexture
-		)
+		// oitHandler.draw(
+		// 	commandBuffer: commandBuffer,
+		// 	renderPassDescriptor: renderPassDescriptor,
+		// 	viewportSize: viewportSize,
+		// 	scene: scene,
+		// 	cameraPosition: camera.position,
+		// 	cameraBuffer: cameraBuffer,
+		// 	sceneBuffer: sceneBuffer,
+		// 	depthTexture: depthTexture
+		// )
 	}
 }

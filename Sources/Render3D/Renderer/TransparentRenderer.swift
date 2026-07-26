@@ -1,7 +1,7 @@
 import Metal
 import Render3DShaders
 
-public class OITTransparencyHandler {
+public class TransparentRenderer: MetalRenderer {
 	private let device: MTLDevice
 	private var accumTexture: MTLTexture?
 	private var revealTexture: MTLTexture?
@@ -10,7 +10,7 @@ public class OITTransparencyHandler {
 	private let compositionPipelineState: MTLRenderPipelineState
 	private let depthStateTransparent: MTLDepthStencilState
 
-	public init(device: MTLDevice, colorPixelFormat: MTLPixelFormat) {
+	public required init(device: MTLDevice) {
 		self.device = device
 
 		let library = try! device.makeDefaultLibrary(bundle: .render3DShaders)
@@ -41,7 +41,7 @@ public class OITTransparencyHandler {
 		let compDesc = MTLRenderPipelineDescriptor()
 		compDesc.vertexFunction = library.makeFunction(name: "oitCompositeVertex")
 		compDesc.fragmentFunction = library.makeFunction(name: "oitCompositeFragment")
-		compDesc.colorAttachments[0].pixelFormat = colorPixelFormat
+		compDesc.colorAttachments[0].pixelFormat = .bgra8Unorm
 		compDesc.colorAttachments[0].isBlendingEnabled = true
 		compDesc.colorAttachments[0].sourceRGBBlendFactor = .sourceAlpha
 		compDesc.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
@@ -78,17 +78,19 @@ public class OITTransparencyHandler {
 		}
 	}
 
+	public func update(drawableSize size: CGSize) {
+		updateTextures(size: size)
+	}
+
 	public func draw(
-		commandBuffer: MTLCommandBuffer,
-		renderPassDescriptor: MTLRenderPassDescriptor,
-		viewportSize: CGSize,
 		scene: Scene3D,
-		cameraPosition: Vec3,
-		cameraBuffer: MTLBuffer,
-		sceneBuffer: MTLBuffer,
-		depthTexture: MTLTexture
+		camera: Camera,
+		renderPassDescriptor: MTLRenderPassDescriptor,
+		commandBuffer: MTLCommandBuffer,
+		depthTexture: MTLTexture,
+		buffers: [(Int, MTLBuffer)]
 	) {
-		updateTextures(size: viewportSize)
+
 		guard let accum = accumTexture, let reveal = revealTexture else { return }
 
 		let pass = MTLRenderPassDescriptor()
@@ -112,10 +114,10 @@ public class OITTransparencyHandler {
 		encoder.setRenderPipelineState(accumulationPipelineState)
 		encoder.setDepthStencilState(depthStateTransparent)
 
-		encoder.setVertexBuffer(cameraBuffer, offset: 0, index: 1)
-		encoder.setVertexBuffer(sceneBuffer, offset: 0, index: 2)
-		encoder.setFragmentBuffer(cameraBuffer, offset: 0, index: 1)
-		encoder.setFragmentBuffer(sceneBuffer, offset: 0, index: 2)
+		for (index, buffer) in buffers {
+			encoder.setVertexBuffer(buffer, offset: 0, index: index)
+			encoder.setFragmentBuffer(buffer, offset: 0, index: index)
+		}
 
 		if let (instancesBuffer, instructions) = scene.renderInfoTransparent() {
 			for (mesh, offset, count) in instructions {
