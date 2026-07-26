@@ -16,13 +16,13 @@ struct Vertex {
   vector_float3 normal VERTEX_ATTR(1);
 };
 
-struct CameraUniforms {
+struct CameraUniform {
   matrix_float4x4 projection;
   matrix_float4x4 view;
   vector_float3 position;
 };
 
-struct SceneUniforms {
+struct SceneUniform {
   vector_float3 lightDirection;
   vector_float3 lightColor;
 
@@ -30,7 +30,7 @@ struct SceneUniforms {
   float ambientStrength;
 };
 
-struct InstanceUniforms {
+struct InstanceUniform {
   matrix_float4x4 model;
   matrix_float3x3 normal;
   vector_float4 color;

@@ -6,11 +6,11 @@ using namespace metal;
 
 
 vertex VertexOutput vertexMain(Vertex v [[stage_in]],
-                               constant CameraUniforms &camera [[buffer(1)]],
-                               constant InstanceUniforms *models [[buffer(3)]],
+                               constant CameraUniform &camera [[buffer(1)]],
+                               constant InstanceUniform *models [[buffer(3)]],
                                uint instanceID [[instance_id]]) {
     VertexOutput data;
-    InstanceUniforms instance = models[instanceID];
+    InstanceUniform instance = models[instanceID];
     float4 worldPosition = instance.model * float4(v.position, 1.0);
 
     data.position = camera.projection * camera.view * worldPosition;
@@ -26,14 +26,14 @@ vertex VertexOutput vertexMain(Vertex v [[stage_in]],
 
 fragment half4 fragmentMain(VertexOutput frag [[stage_in]], 
                             bool frontFacing [[front_facing]],
-                            constant CameraUniforms &camera [[buffer(1)]],
-                            constant SceneUniforms &scene [[buffer(2)]],
-                            constant InstanceUniforms *models [[buffer(3)]]) {
+                            constant CameraUniform &camera [[buffer(1)]],
+                            constant SceneUniform &scene [[buffer(2)]],
+                            constant InstanceUniform *models [[buffer(3)]]) {
     if (!frontFacing) {
         frag.normal =- frag.normal;
     }
 
-    InstanceUniforms instance = models[frag.instanceID];
+    InstanceUniform instance = models[frag.instanceID];
     if (instance.skipLight) return half4(half3(instance.color.rgb), half(instance.color.a));
 
     float3 lightDir = normalize(scene.lightDirection);

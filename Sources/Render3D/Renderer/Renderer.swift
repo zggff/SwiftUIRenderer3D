@@ -70,8 +70,8 @@ public class Renderer {
 
 	public required init(device: any MTLDevice) {
 		self.device = device
-		self.cameraBuffer = CameraUniforms.allocateBuffer(for: device)!
-		self.sceneBuffer = SceneUniforms.allocateBuffer(for: device)!
+		self.cameraBuffer = CameraUniform.allocateBuffer(for: device)!
+		self.sceneBuffer = SceneUniform.allocateBuffer(for: device)!
 		self.meshCache = MeshCache(device: device)
 	}
 
@@ -126,8 +126,8 @@ public class Renderer {
 		guard let depthTexture else { return }
 
 		let aspect = Float(size.width) / Float(size.height)
-		camera.uniforms(for: aspect).write(into: cameraBuffer)
-		scene.uniforms.write(into: sceneBuffer)
+		camera.uniform(for: aspect).write(into: cameraBuffer)
+		scene.uniform.write(into: sceneBuffer)
 
 		let context = RenderContext(
 			scene: scene, camera: camera, renderPassDescriptor: renderPassDescriptor,

@@ -10,7 +10,7 @@ public class ObjectStorage {
 	var count: Int { objectCount }
 
 	var requiredBufferSize: Int {
-		count * MemoryLayout<InstanceUniforms>.stride
+		count * MemoryLayout<InstanceUniform>.stride
 	}
 
 	var buffer: MTLBuffer? = nil
@@ -74,7 +74,7 @@ public class ObjectStorage {
 
 		for (index, object) in nonCachable.enumerated() {
 			let mesh = cache.mesh(for: object)
-			let instanceOffset = offset + index * MemoryLayout<InstanceUniforms>.stride
+			let instanceOffset = offset + index * MemoryLayout<InstanceUniform>.stride
 			instructions.append((mesh, instanceOffset, 1))
 		}
 		offset += buffer.write(nonCachable, offset: offset, transform: (\.uniform))

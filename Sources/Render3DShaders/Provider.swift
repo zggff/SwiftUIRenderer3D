@@ -1,11 +1,12 @@
 import Metal
+import Render3DShadersC
 
-public protocol UniformProvider {
+public protocol Uniform {
 	static func allocateBuffer(for device: MTLDevice) -> MTLBuffer?
 	func write(into buffer: MTLBuffer, offset: Int) -> Int
 }
 
-extension UniformProvider {
+extension Uniform {
 	@discardableResult
 	public func write(into buffer: MTLBuffer, offset: Int = 0) -> Int {
 		withUnsafeBytes(of: self) { bytes in
@@ -22,9 +23,9 @@ extension UniformProvider {
 	}
 }
 
-extension CameraUniforms: UniformProvider {}
-extension SceneUniforms: UniformProvider {}
-extension InstanceUniforms: UniformProvider {}
+extension CameraUniform: Uniform {}
+extension SceneUniform: Uniform {}
+extension InstanceUniform: Uniform {}
 
 extension MTLBuffer {
 	@discardableResult

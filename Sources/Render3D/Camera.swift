@@ -27,13 +27,13 @@ public struct Camera {
 		return Matrix.lookAt(eye: position, target: target, up: up)
 	}
 
-	public func uniforms(for aspect: Float) -> CameraUniforms {
+	public func uniform(for aspect: Float) -> CameraUniform {
 		let projection = Matrix.projection(
 			projectionFov: Float(70).degrees,
 			near: 1,
 			far: 1000,
 			aspect: aspect)
-		return CameraUniforms(
+		return CameraUniform(
 			projection: projection, view: view, position: position)
 
 	}

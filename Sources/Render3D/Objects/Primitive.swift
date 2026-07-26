@@ -48,7 +48,7 @@ public enum Primitive {
 			self.color = color
 			self.center = center
 			self.model = Matrix.translation(center) * Matrix.scale(Vec3(size, size, size))
-			var uniform = InstanceUniforms()
+			var uniform = InstanceUniform()
 			uniform.model = model
 			uniform.color = color
 			uniform.skipLight = 1
@@ -59,7 +59,7 @@ public enum Primitive {
 		public let model: Matrix
 		public let center: Vec3
 
-		public let uniform: InstanceUniforms
+		public let uniform: InstanceUniform
 		public func mesh(for device: MTLDevice) -> Mesh? {
 			return Mesh.cubePrimitive(device)
 		}

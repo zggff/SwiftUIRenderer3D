@@ -10,10 +10,10 @@ struct OITFragmentOutput {
 };
 
 fragment OITFragmentOutput oitAccumulationFragment(VertexOutput frag [[stage_in]],
-                                                   constant CameraUniforms &camera [[buffer(1)]],
-                                                   constant SceneUniforms &scene [[buffer(2)]],
-                                                   constant InstanceUniforms *models [[buffer(3)]]) {
-    InstanceUniforms instance = models[frag.instanceID];
+                                                   constant CameraUniform &camera [[buffer(1)]],
+                                                   constant SceneUniform &scene [[buffer(2)]],
+                                                   constant InstanceUniform *models [[buffer(3)]]) {
+    InstanceUniform instance = models[frag.instanceID];
     float alpha = instance.color.a;
     
     if (alpha >= 1.0) discard_fragment();

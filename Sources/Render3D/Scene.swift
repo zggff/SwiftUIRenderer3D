@@ -19,7 +19,7 @@ public final class Scene3D {
 		renderGroups.append(descriptor)
 	}
 
-	public var uniforms: SceneUniforms = SceneUniforms(
+	public var uniform: SceneUniform = SceneUniform(
 		lightDirection: [0, 1, 0],
 		lightColor: [1, 1, 1],
 		diffuseStrength: 0.0,
