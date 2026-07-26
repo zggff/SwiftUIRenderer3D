@@ -1,16 +1,53 @@
 import Metal
 
-protocol MetalRenderer {
-	init(device: MTLDevice)
+public protocol MetalRenderer: AnyObject {
+	init(device: any MTLDevice)
 	func update(drawableSize size: CGSize)
-	func draw(
-		scene: Scene3D,
-		camera: Camera,
-		renderPassDescriptor: MTLRenderPassDescriptor,
-		commandBuffer: MTLCommandBuffer,
-		depthTexture: MTLTexture,
-		buffers: [(Int, MTLBuffer)]
-	)
+	func draw(context: RenderContext, group: RenderGroup)
+}
+
+public struct RenderContext {
+	public let scene: Scene3D
+	public let camera: Camera
+	public let renderPassDescriptor: MTLRenderPassDescriptor
+	public let commandBuffer: MTLCommandBuffer
+	public let depthTexture: MTLTexture
+
+	let cameraBuffer: MTLBuffer
+	let sceneBuffer: MTLBuffer
+	let cache: MeshCache
+
+	public func bindSharedBuffers(to encoder: MTLRenderCommandEncoder) {
+		encoder.setVertexBuffer(cameraBuffer, offset: 0, index: 1)
+		encoder.setFragmentBuffer(cameraBuffer, offset: 0, index: 1)
+		encoder.setVertexBuffer(sceneBuffer, offset: 0, index: 2)
+		encoder.setFragmentBuffer(sceneBuffer, offset: 0, index: 2)
+	}
+}
+
+public typealias DrawInstruction = (Mesh?, Int, Int)
+
+class MeshCache {
+	var meshCache: [ObjectIdentifier: Mesh] = [:]
+	var device: any MTLDevice
+
+	init(device: MTLDevice) {
+		self.device = device
+	}
+
+	func mesh(for obj: any Renderable) -> Mesh? {
+		let objType = type(of: obj)
+		guard objType.cachable else {
+			return obj.mesh(for: device)
+		}
+		let id = ObjectIdentifier(objType)
+		guard let mesh = meshCache[id] else {
+			let mesh = obj.mesh(for: device)
+			meshCache[id] = mesh
+			return mesh
+		}
+		return mesh
+	}
 }
 
 public class Renderer {
@@ -18,26 +55,33 @@ public class Renderer {
 	var sceneBuffer: MTLBuffer
 	var cameraBuffer: MTLBuffer
 	var depthTexture: MTLTexture?
+	var meshCache: MeshCache
 
-	let opaque: OpaqueRenderer
-	let transparent: TransparentRenderer
-	var aspect: Float = 1
+	var renderGroups: [RenderGroup] = []
+	var size: CGSize = CGSize(width: 1, height: 1)
 
 	public required init(device: any MTLDevice) {
 		self.device = device
-
 		self.cameraBuffer = CameraUniforms.allocateBuffer(for: device)!
 		self.sceneBuffer = SceneUniforms.allocateBuffer(for: device)!
-
-		self.opaque = OpaqueRenderer(device: device)
-		self.transparent = TransparentRenderer(device: device)
+		self.meshCache = MeshCache(device: device)
 	}
 
 	public func update(drawableSize size: CGSize) {
 		updateDepthTexture(size: size)
-		aspect = Float(size.width) / Float(size.height)
-		opaque.update(drawableSize: size)
-		transparent.update(drawableSize: size)
+		self.size = size
+		for g in renderGroups {
+			g.renderer?.update(drawableSize: size)
+		}
+	}
+
+	public func initRenderers(scene: Scene3D) {
+		for g in scene.renderGroups {
+			if g.renderer == nil {
+				g.initRenderer(device: device)
+				g.renderer?.update(drawableSize: size)
+			}
+		}
 	}
 
 	private func updateDepthTexture(size: CGSize) {
@@ -63,16 +107,22 @@ public class Renderer {
 		renderPassDescriptor: MTLRenderPassDescriptor,
 		commandBuffer: MTLCommandBuffer,
 	) {
+		initRenderers(scene: scene)
+
 		guard let depthTexture else { return }
+
+		let aspect = Float(size.width) / Float(size.height)
 		camera.uniforms(for: aspect).write(into: cameraBuffer)
 		scene.uniforms.write(into: sceneBuffer)
-		let buffers = [(1, cameraBuffer), (2, sceneBuffer)]
 
-		opaque.draw(
+		let context = RenderContext(
 			scene: scene, camera: camera, renderPassDescriptor: renderPassDescriptor,
-			commandBuffer: commandBuffer, depthTexture: depthTexture, buffers: buffers)
-		transparent.draw(
-			scene: scene, camera: camera, renderPassDescriptor: renderPassDescriptor,
-			commandBuffer: commandBuffer, depthTexture: depthTexture, buffers: buffers)
+			commandBuffer: commandBuffer, depthTexture: depthTexture,
+			cameraBuffer: cameraBuffer, sceneBuffer: sceneBuffer,
+			cache: meshCache)
+
+		for g in scene.renderGroups {
+			g.renderer?.draw(context: context, group: g)
+		}
 	}
 }

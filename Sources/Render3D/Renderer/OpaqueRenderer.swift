@@ -6,7 +6,6 @@ public class OpaqueRenderer: MetalRenderer {
 	public let device: any MTLDevice
 	let pipeline: MTLRenderPipelineState
 	let depthState: MTLDepthStencilState
-	// let oitHandler: OITTransparencyHandler
 
 	public required init(device: any MTLDevice) {
 		self.device = device
@@ -39,51 +38,27 @@ public class OpaqueRenderer: MetalRenderer {
 		depthDescriptor.depthCompareFunction = .less
 		depthDescriptor.isDepthWriteEnabled = true
 		self.depthState = device.makeDepthStencilState(descriptor: depthDescriptor)!
-
-		// self.oitHandler = OITTransparencyHandler(device: device, colorPixelFormat: .bgra8Unorm)
-		// self.cameraBuffer = CameraUniforms.allocateBuffer(for: device)!
-		// self.sceneBuffer = SceneUniforms.allocateBuffer(for: device)!
 	}
 
-	func update(drawableSize size: CGSize) {}
+	public func update(drawableSize size: CGSize) {}
 
-	public func draw(
-		scene: Scene3D,
-		camera: Camera,
-		renderPassDescriptor: MTLRenderPassDescriptor,
-		commandBuffer: MTLCommandBuffer,
-		depthTexture: MTLTexture,
-		buffers: [(Int, MTLBuffer)]
-
-	) {
-		// updateDepthTexture(size: viewportSize)
-		// guard let depthTexture else { return }
-
-		renderPassDescriptor.depthAttachment.texture = depthTexture
-		renderPassDescriptor.depthAttachment.clearDepth = 1.0
-		renderPassDescriptor.depthAttachment.loadAction = .clear
-		renderPassDescriptor.depthAttachment.storeAction = .store
+	public func draw(context ctx: RenderContext, group: RenderGroup) {
+		ctx.renderPassDescriptor.depthAttachment.texture = ctx.depthTexture
+		ctx.renderPassDescriptor.depthAttachment.clearDepth = 1.0
+		ctx.renderPassDescriptor.depthAttachment.loadAction = .clear
+		ctx.renderPassDescriptor.depthAttachment.storeAction = .store
 
 		guard
-			let renderEncoder = commandBuffer.makeRenderCommandEncoder(
-				descriptor: renderPassDescriptor)
+			let renderEncoder = ctx.commandBuffer.makeRenderCommandEncoder(
+				descriptor: ctx.renderPassDescriptor)
 		else { return }
 
 		renderEncoder.setRenderPipelineState(pipeline)
 
 		renderEncoder.setDepthStencilState(depthState)
 
-		for (index, buffer) in buffers {
-			renderEncoder.setVertexBuffer(buffer, offset: 0, index: index)
-			renderEncoder.setFragmentBuffer(buffer, offset: 0, index: index)
-		}
-
-		if let (instancesBuffer, instructions) = scene.renderInfoOpaque() {
-			// renderEncoder.setVertexBuffer(cameraBuffer, offset: 0, index: 1)
-			// renderEncoder.setVertexBuffer(sceneBuffer, offset: 0, index: 2)
-			// renderEncoder.setFragmentBuffer(cameraBuffer, offset: 0, index: 1)
-			// renderEncoder.setFragmentBuffer(sceneBuffer, offset: 0, index: 2)
-
+		if let (instancesBuffer, instructions) = group.storage.renderInfo(cache: ctx.cache) {
+			ctx.bindSharedBuffers(to: renderEncoder)
 			for (mesh, offset, count) in instructions {
 				guard let mesh else { continue }
 				renderEncoder.setCullMode(mesh.cullMode)
@@ -99,15 +74,5 @@ public class OpaqueRenderer: MetalRenderer {
 		}
 
 		renderEncoder.endEncoding()
-		// oitHandler.draw(
-		// 	commandBuffer: commandBuffer,
-		// 	renderPassDescriptor: renderPassDescriptor,
-		// 	viewportSize: viewportSize,
-		// 	scene: scene,
-		// 	cameraPosition: camera.position,
-		// 	cameraBuffer: cameraBuffer,
-		// 	sceneBuffer: sceneBuffer,
-		// 	depthTexture: depthTexture
-		// )
 	}
 }

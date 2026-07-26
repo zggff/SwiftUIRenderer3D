@@ -82,15 +82,7 @@ public class TransparentRenderer: MetalRenderer {
 		updateTextures(size: size)
 	}
 
-	public func draw(
-		scene: Scene3D,
-		camera: Camera,
-		renderPassDescriptor: MTLRenderPassDescriptor,
-		commandBuffer: MTLCommandBuffer,
-		depthTexture: MTLTexture,
-		buffers: [(Int, MTLBuffer)]
-	) {
-
+	public func draw(context ctx: RenderContext, group: RenderGroup) {
 		guard let accum = accumTexture, let reveal = revealTexture else { return }
 
 		let pass = MTLRenderPassDescriptor()
@@ -104,22 +96,18 @@ public class TransparentRenderer: MetalRenderer {
 		pass.colorAttachments[1].storeAction = .store
 		pass.colorAttachments[1].clearColor = MTLClearColor(red: 1, green: 1, blue: 1, alpha: 1)
 
-		pass.depthAttachment.texture = depthTexture
+		pass.depthAttachment.texture = ctx.depthTexture
 		pass.depthAttachment.loadAction = .load
 		pass.depthAttachment.storeAction = .store
 
-		guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: pass) else {
+		guard let encoder = ctx.commandBuffer.makeRenderCommandEncoder(descriptor: pass) else {
 			return
 		}
 		encoder.setRenderPipelineState(accumulationPipelineState)
 		encoder.setDepthStencilState(depthStateTransparent)
+        ctx.bindSharedBuffers(to: encoder)
 
-		for (index, buffer) in buffers {
-			encoder.setVertexBuffer(buffer, offset: 0, index: index)
-			encoder.setFragmentBuffer(buffer, offset: 0, index: index)
-		}
-
-		if let (instancesBuffer, instructions) = scene.renderInfoTransparent() {
+		if let (instancesBuffer, instructions) = group.storage.renderInfo(cache: ctx.cache) {
 			for (mesh, offset, count) in instructions {
 				guard let mesh else { continue }
 				encoder.setCullMode(mesh.cullMode)
@@ -135,13 +123,13 @@ public class TransparentRenderer: MetalRenderer {
 		}
 		encoder.endEncoding()
 
-		renderPassDescriptor.colorAttachments[0].loadAction = .load
-		renderPassDescriptor.colorAttachments[0].storeAction = .store
-		renderPassDescriptor.colorAttachments[1].texture = nil
+		ctx.renderPassDescriptor.colorAttachments[0].loadAction = .load
+		ctx.renderPassDescriptor.colorAttachments[0].storeAction = .store
+		ctx.renderPassDescriptor.colorAttachments[1].texture = nil
 
 		guard
-			let compEncoder = commandBuffer.makeRenderCommandEncoder(
-				descriptor: renderPassDescriptor)
+			let compEncoder = ctx.commandBuffer.makeRenderCommandEncoder(
+				descriptor: ctx.renderPassDescriptor)
 		else { return }
 		compEncoder.setRenderPipelineState(compositionPipelineState)
 		compEncoder.setFragmentTexture(accum, index: 0)
