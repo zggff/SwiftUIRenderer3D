@@ -13,9 +13,9 @@ public struct RenderContext {
 	public let commandBuffer: MTLCommandBuffer
 	public let depthTexture: MTLTexture
 
-	let cameraBuffer: MTLBuffer
-	let sceneBuffer: MTLBuffer
-	let cache: MeshCache
+	public let cameraBuffer: MTLBuffer
+	public let sceneBuffer: MTLBuffer
+	public let cache: MeshCache
 
 	public func bindSharedBuffers(to encoder: MTLRenderCommandEncoder) {
 		encoder.setVertexBuffer(cameraBuffer, offset: 0, index: 1)
@@ -27,15 +27,15 @@ public struct RenderContext {
 
 public typealias DrawInstruction = (Mesh?, Int, Int)
 
-class MeshCache {
+public class MeshCache {
 	var meshCache: [ObjectIdentifier: Mesh] = [:]
-	var device: any MTLDevice
+	public private(set) var device: any MTLDevice
 
 	init(device: MTLDevice) {
 		self.device = device
 	}
 
-	func mesh(for obj: any Renderable) -> Mesh? {
+	public func mesh(for obj: any Renderable) -> Mesh? {
 		let objType = type(of: obj)
 		guard objType.cachable else {
 			return obj.mesh(for: device)
@@ -129,6 +129,14 @@ public class Renderer {
 		camera.uniform(for: aspect).write(into: cameraBuffer)
 		scene.uniform.write(into: sceneBuffer)
 
+		renderPassDescriptor.depthAttachment.texture = depthTexture
+		renderPassDescriptor.depthAttachment.clearDepth = 1.0
+		renderPassDescriptor.depthAttachment.loadAction = .clear
+		renderPassDescriptor.depthAttachment.storeAction = .store
+		renderPassDescriptor.depthAttachment.loadAction = .clear
+
+		renderPassDescriptor.colorAttachments[0].loadAction = .clear
+
 		let context = RenderContext(
 			scene: scene, camera: camera, renderPassDescriptor: renderPassDescriptor,
 			commandBuffer: commandBuffer, depthTexture: depthTexture,
@@ -138,6 +146,8 @@ public class Renderer {
 		for g in scene.renderGroups.sorted(by: { a, b in a.order < b.order }) {
 			guard let renderer = renderers[g.id] else { continue }
 			renderer.draw(context: context, group: g)
+			renderPassDescriptor.colorAttachments[0].loadAction = .load
+			renderPassDescriptor.depthAttachment.loadAction = .load
 		}
 	}
 }

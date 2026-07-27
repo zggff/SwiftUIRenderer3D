@@ -13,7 +13,7 @@ public class TransparentRenderer: MetalRenderer {
 	public required init(device: MTLDevice) throws {
 		self.device = device
 
-        let library = try Library(type: .builtin, for: device)
+		let library = try Library(type: .builtin, for: device)
 
 		let accumDesc = MTLRenderPipelineDescriptor()
 
@@ -106,7 +106,7 @@ public class TransparentRenderer: MetalRenderer {
 		}
 		encoder.setRenderPipelineState(accumulationPipelineState)
 		encoder.setDepthStencilState(depthStateTransparent)
-        ctx.bindSharedBuffers(to: encoder)
+		ctx.bindSharedBuffers(to: encoder)
 
 		if let (instancesBuffer, instructions) = group.storage.renderInfo(cache: ctx.cache) {
 			for (mesh, offset, count) in instructions {
@@ -124,8 +124,6 @@ public class TransparentRenderer: MetalRenderer {
 		}
 		encoder.endEncoding()
 
-		ctx.renderPassDescriptor.colorAttachments[0].loadAction = .load
-		ctx.renderPassDescriptor.colorAttachments[0].storeAction = .store
 		ctx.renderPassDescriptor.colorAttachments[1].texture = nil
 
 		guard
@@ -137,5 +135,14 @@ public class TransparentRenderer: MetalRenderer {
 		compEncoder.setFragmentTexture(reveal, index: 1)
 		compEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
 		compEncoder.endEncoding()
+	}
+}
+
+extension RenderGroup {
+	public static var transparentID: String { "builtin.transparent" }
+	public static var transparent: RenderGroup {
+		RenderGroup(
+			id: transparentID, order: 1000, renderer: OpaqueRenderer.self,
+			storage: CachedObjectStorage.self)
 	}
 }

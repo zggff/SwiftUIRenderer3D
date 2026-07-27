@@ -53,30 +53,6 @@ public struct Mesh: @unchecked Sendable {
 		self.init(vertex: vertex, index: index, count: indices.count, indexType: I.metalIndexType, cullMode: cullMode)
 	}
 
-	public static func cubePrimitive(_ device: MTLDevice) -> Mesh? {
-
-		let s = Float(0.5)
-		let vertices: [Vertex] = [
-			Vertex(position: SIMD3<Float>(-s, -s, s)),
-			Vertex(position: SIMD3<Float>(s, -s, s)),
-			Vertex(position: SIMD3<Float>(s, s, s)),
-			Vertex(position: SIMD3<Float>(-s, s, s)),
-			Vertex(position: SIMD3<Float>(-s, -s, -s)),
-			Vertex(position: SIMD3<Float>(s, -s, -s)),
-			Vertex(position: SIMD3<Float>(s, s, -s)),
-			Vertex(position: SIMD3<Float>(-s, s, -s)),
-		]
-		let indices: [UInt16] = [
-			0, 1, 2, 2, 3, 0,
-			1, 5, 6, 6, 2, 1,
-			5, 4, 7, 7, 6, 5,
-			4, 0, 3, 3, 7, 4,
-			3, 2, 6, 6, 7, 3,
-			4, 5, 1, 1, 0, 4,
-		]
-		return Mesh(device, vertices: vertices, indices: indices)
-	}
-
 	public static func cube(_ device: MTLDevice) -> Mesh? {
 		let s = Float(0.5)
 		let vertices: [Vertex] = [

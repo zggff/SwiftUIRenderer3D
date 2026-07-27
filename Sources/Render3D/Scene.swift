@@ -4,16 +4,11 @@ import Render3DShaders
 import simd
 
 public final class Scene3D {
-	public init(renderGroups: [RenderGroup]? = nil) {
-		if let renderGroups {
-			self.renderGroups = renderGroups
-		}
+	public init(renderGroups: [RenderGroup] = [.opaque, .transparent]) {
+		self.renderGroups = renderGroups
 	}
 
-	public private(set) var renderGroups: [RenderGroup] = [
-		RenderGroup(id: "builtin.opaque", order: 0, renderer: OpaqueRenderer.self),
-		RenderGroup(id: "builtin.transparent", order: 100, renderer: TransparentRenderer.self),
-	]
+	public private(set) var renderGroups: [RenderGroup]
 
 	public func addRenderGroup(_ descriptor: RenderGroup) {
 		renderGroups.append(descriptor)
@@ -51,11 +46,11 @@ public final class Scene3D {
 	public struct Context {
 		fileprivate var scene: Scene3D
 
-		public func draw<T: Renderable>(_ objects: [T]) {
-			scene.storage(for: "builtin.opaque")?.append(objects.filter(\.opaque))
-			scene.storage(for: "builtin.transparent")?.append(objects.filter(\.transparent))
+		public func draw<T: Renderable3D>(_ objects: [T]) {
+			scene.storage(for: RenderGroup.opaqueID)?.append(objects.filter(\.opaque))
+			scene.storage(for: RenderGroup.transparentID)?.append(objects.filter(\.transparent))
 		}
-		public func draw<T: Renderable>(_ object: T) {
+		public func draw<T: Renderable3D>(_ object: T) {
 			draw([object])
 		}
 

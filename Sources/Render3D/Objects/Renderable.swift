@@ -4,17 +4,22 @@ import Synchronization
 import simd
 
 public protocol Renderable {
-	var model: Matrix { get }
-	var color: Vec4 { get }
-	var uniform: InstanceUniform { get }
+	associatedtype UniformType
+	var uniform: UniformType { get }
 
 	func mesh(for device: MTLDevice) -> Mesh?
 	static var cachable: Bool { get }
 }
 
-extension Renderable {
-    public var opaque: Bool {color.w == 1}
-    public var transparent: Bool {color.w < 1}
+public protocol Renderable3D: Renderable {
+	associatedtype UniformType = InstanceUniform
+	var model: Matrix { get }
+	var color: Vec4 { get }
+}
+
+extension Renderable3D {
+	public var opaque: Bool { color.w == 1 }
+	public var transparent: Bool { color.w < 1 }
 
 	public var uniform: InstanceUniform {
 		var uniform = InstanceUniform()

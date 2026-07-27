@@ -39,18 +39,12 @@ public class OpaqueRenderer: MetalRenderer {
 	public func update(drawableSize size: CGSize) {}
 
 	public func draw(context ctx: RenderContext, group: RenderGroup) {
-		ctx.renderPassDescriptor.depthAttachment.texture = ctx.depthTexture
-		ctx.renderPassDescriptor.depthAttachment.clearDepth = 1.0
-		ctx.renderPassDescriptor.depthAttachment.loadAction = .clear
-		ctx.renderPassDescriptor.depthAttachment.storeAction = .store
-
 		guard
 			let renderEncoder = ctx.commandBuffer.makeRenderCommandEncoder(
 				descriptor: ctx.renderPassDescriptor)
 		else { return }
 
 		renderEncoder.setRenderPipelineState(pipeline)
-
 		renderEncoder.setDepthStencilState(depthState)
 
 		if let (instancesBuffer, instructions) = group.storage.renderInfo(cache: ctx.cache) {
@@ -70,5 +64,14 @@ public class OpaqueRenderer: MetalRenderer {
 		}
 
 		renderEncoder.endEncoding()
+	}
+}
+
+extension RenderGroup {
+	public static var opaqueID: String { "builtin.opaque" }
+	public static var opaque: RenderGroup {
+		RenderGroup(
+			id: opaqueID, order: 0, renderer: OpaqueRenderer.self,
+			storage: CachedObjectStorage.self)
 	}
 }

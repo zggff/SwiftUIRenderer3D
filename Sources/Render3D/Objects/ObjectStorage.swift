@@ -1,20 +1,31 @@
 import Metal
 
-public class ObjectStorage {
-	var cachable: [ObjectIdentifier: [any Renderable]] = [:]
-	var nonCachable: [any Renderable] = []
+public protocol ObjectStorage: AnyObject {
+	init()
+
+	var count: Int { get }
+	func append<T: Renderable>(_ objects: [T])
+	func removeAll()
+	func renderInfo(cache: MeshCache) -> (MTLBuffer, [DrawInstruction])?
+}
+
+public class CachedObjectStorage: ObjectStorage {
+    typealias Element = any Renderable3D
+
+	var cachable: [ObjectIdentifier: [Element]] = [:]
+	var nonCachable: [Element] = []
 	var instructions: [DrawInstruction] = []
 	var shouldUpdate: Bool = false
-
-	private var objectCount: Int = 0
-	var count: Int { objectCount }
+	public private(set) var count: Int = 0
+	var buffer: MTLBuffer? = nil
 
 	var requiredBufferSize: Int {
 		count * MemoryLayout<InstanceUniform>.stride
 	}
 
-	var buffer: MTLBuffer? = nil
-	func allocBuffer(device: any MTLDevice) {
+	public required init() {}
+
+	func allocBuffer(device: MTLDevice) {
 		let size = requiredBufferSize
 		guard size > 0 else { return }
 		if let buffer = buffer, buffer.length >= size { return }
@@ -23,8 +34,9 @@ public class ObjectStorage {
 
 	public func append<T: Renderable>(_ objects: [T]) {
 		guard !objects.isEmpty else { return }
+		guard let objects = objects as? [Element] else { return }
 		shouldUpdate = true
-		objectCount += objects.count
+		count += objects.count
 
 		if T.cachable {
 			let id = ObjectIdentifier(T.self)
@@ -39,7 +51,7 @@ public class ObjectStorage {
 
 	public func removeAll() {
 		shouldUpdate = true
-		objectCount = 0
+		count = 0
 
 		for index in cachable.values.indices {
 			cachable.values[index].removeAll(keepingCapacity: true)
@@ -47,7 +59,7 @@ public class ObjectStorage {
 		nonCachable.removeAll(keepingCapacity: true)
 	}
 
-	func renderInfo(cache: MeshCache) -> (MTLBuffer, [DrawInstruction])? {
+	public func renderInfo(cache: MeshCache) -> (MTLBuffer, [DrawInstruction])? {
 		createDrawInstructions(cache: cache)
 		guard let buffer = buffer else { return nil }
 		return (buffer, instructions)
@@ -67,7 +79,6 @@ public class ObjectStorage {
 			let mesh = cache.mesh(for: first)
 			instructions.append((mesh, offset, objects.count))
 			offset += buffer.write(objects, offset: offset, transform: (\.uniform))
-
 		}
 
 		guard !nonCachable.isEmpty else { return }
