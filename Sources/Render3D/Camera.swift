@@ -27,7 +27,14 @@ public struct Camera {
 		return Matrix.lookAt(eye: position, target: target, up: up)
 	}
 
-	public func uniform(for aspect: Float) -> CameraUniform {
+	public private(set) var aspect: Float = 1
+	public func withAspect(_ aspect: Float) -> Camera {
+		var new = self
+		new.aspect = aspect
+		return new
+	}
+
+	public var uniform: CameraUniform {
 		let projection = Matrix.projection(
 			projectionFov: Float(70).degrees,
 			near: 1,

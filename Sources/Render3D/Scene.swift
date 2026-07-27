@@ -14,12 +14,29 @@ public final class Scene3D {
 		renderGroups.append(descriptor)
 	}
 
-	public var uniform: SceneUniform = SceneUniform(
-		lightDirection: [0, 1, 0],
-		lightColor: [1, 1, 1],
-		diffuseStrength: 0.0,
-		ambientStrength: 0.8
-	)
+	public var uniforms: [ObjectIdentifier: any Uniform] = [
+		ObjectIdentifier(SceneUniform.self):
+			SceneUniform(
+				lightDirection: [0, 1, 0],
+				lightColor: [1, 1, 1],
+				diffuseStrength: 0.0,
+				ambientStrength: 0.8
+			)
+	]
+
+	public func setSceneUniform<T: Uniform>(_ uniform: T) {
+		self.uniforms[ObjectIdentifier(T.self)] = uniform
+	}
+
+	public func getSceneUniform<T: Uniform>(of type: T.Type) -> T? {
+		return self.uniforms[ObjectIdentifier(type)] as? T
+	}
+
+	public func modifySceneUniform<T: Uniform>(of type: T.Type, _ modifier: (inout T) -> Void) {
+		guard var uniform = getSceneUniform(of: type) else { return }
+		modifier(&uniform)
+		setSceneUniform(uniform)
+	}
 
 	public var onFinishDeclaration: (() -> Void)?
 	public func finishDeclaration() {

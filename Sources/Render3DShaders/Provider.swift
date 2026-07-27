@@ -2,13 +2,15 @@ import Metal
 import Render3DShadersC
 
 public protocol Uniform {
-	static func allocateBuffer(for device: MTLDevice) -> MTLBuffer?
-	func write(into buffer: MTLBuffer, offset: Int) -> Int
+	func allocateBuffer(for device: any MTLDevice, buffer: inout MTLBuffer?)
+	func write(into buffer: MTLBuffer?, offset: Int) -> Int
+	var requiredSize: Int { get }
 }
 
 extension Uniform {
 	@discardableResult
-	public func write(into buffer: MTLBuffer, offset: Int = 0) -> Int {
+	public func write(into buffer: MTLBuffer?, offset: Int = 0) -> Int {
+		guard let buffer else { return 0 }
 		withUnsafeBytes(of: self) { bytes in
 			buffer.contents()
 				.advanced(by: offset)
@@ -18,8 +20,21 @@ extension Uniform {
 		return MemoryLayout<Self>.stride
 	}
 
-	public static func allocateBuffer(for device: MTLDevice) -> MTLBuffer? {
-		device.makeBuffer(length: MemoryLayout<Self>.stride)
+	public var requiredSize: Int { MemoryLayout<Self>.stride }
+
+	public func allocateBuffer(for device: any MTLDevice, buffer: inout MTLBuffer?) {
+		if (buffer?.length ?? 0) < requiredSize {
+			buffer = device.makeBuffer(length: requiredSize)
+		}
+	}
+
+	@discardableResult
+	public func allocateAndWrite(
+		for device: any MTLDevice, buffer: inout MTLBuffer?, offset: Int = 0
+	) -> Int {
+		allocateBuffer(for: device, buffer: &buffer)
+		return write(into: buffer, offset: offset)
+
 	}
 }
 

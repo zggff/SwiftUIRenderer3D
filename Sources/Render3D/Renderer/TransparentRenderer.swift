@@ -106,7 +106,8 @@ public class TransparentRenderer: MetalRenderer {
 		}
 		encoder.setRenderPipelineState(accumulationPipelineState)
 		encoder.setDepthStencilState(depthStateTransparent)
-		ctx.bindSharedBuffers(to: encoder)
+        group.storage.updateBuffers(device: device, camera: ctx.camera, scene: ctx.scene)
+        group.storage.bindBuffers(to: encoder)
 
 		if let (instancesBuffer, instructions) = group.storage.renderInfo(cache: ctx.cache) {
 			for (mesh, offset, count) in instructions {

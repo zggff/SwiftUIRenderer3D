@@ -7,10 +7,27 @@ public protocol ObjectStorage: AnyObject {
 	func append<T: Renderable>(_ objects: [T])
 	func removeAll()
 	func renderInfo(cache: MeshCache) -> (MTLBuffer, [DrawInstruction])?
+
+	func updateBuffers(device: MTLDevice, camera: Camera, scene: Scene3D)
+	func bindBuffers(to encoder: MTLRenderCommandEncoder)
 }
 
 public class CachedObjectStorage: ObjectStorage {
-    typealias Element = any Renderable3D
+	public func updateBuffers(device: MTLDevice, camera: Camera, scene: Scene3D) {
+		let camera = camera.uniform
+		camera.allocateAndWrite(for: device, buffer: &cameraBuffer)
+		scene.getSceneUniform(of: SceneUniform.self)?.allocateAndWrite(
+			for: device, buffer: &sceneBuffer)
+	}
+
+	public func bindBuffers(to encoder: MTLRenderCommandEncoder) {
+		encoder.setVertexBuffer(cameraBuffer, offset: 0, index: 1)
+		encoder.setFragmentBuffer(cameraBuffer, offset: 0, index: 1)
+		encoder.setVertexBuffer(sceneBuffer, offset: 0, index: 2)
+		encoder.setFragmentBuffer(sceneBuffer, offset: 0, index: 2)
+	}
+
+	typealias Element = any Renderable3D
 
 	var cachable: [ObjectIdentifier: [Element]] = [:]
 	var nonCachable: [Element] = []
@@ -18,6 +35,9 @@ public class CachedObjectStorage: ObjectStorage {
 	var shouldUpdate: Bool = false
 	public private(set) var count: Int = 0
 	var buffer: MTLBuffer? = nil
+
+	var cameraBuffer: MTLBuffer? = nil
+	var sceneBuffer: MTLBuffer? = nil
 
 	var requiredBufferSize: Int {
 		count * MemoryLayout<InstanceUniform>.stride
