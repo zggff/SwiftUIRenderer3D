@@ -14,6 +14,26 @@ public struct RenderContext {
 	public let depthTexture: MTLTexture
 
 	public let cache: MeshCache
+	public let buffers: [ObjectIdentifier: MTLBuffer]
+
+	public func bindFragmentBuffer<T: Uniform>(
+		of type: T.Type, to encoder: MTLRenderCommandEncoder, index: Int,
+	) {
+		encoder.setFragmentBuffer(buffers[ObjectIdentifier(type)], offset: 0, index: index)
+	}
+	public func bindVertexBuffer<T: Uniform>(
+		of type: T.Type, to encoder: MTLRenderCommandEncoder, index: Int,
+	) {
+		encoder.setVertexBuffer(buffers[ObjectIdentifier(type)], offset: 0, index: index)
+	}
+
+	public func bindBuffer<T: Uniform>(
+		of type: T.Type, to encoder: MTLRenderCommandEncoder, index: Int,
+	) {
+        bindFragmentBuffer(of: type, to: encoder, index: index)
+        bindVertexBuffer(of: type, to: encoder, index: index)
+	}
+
 }
 
 public typealias DrawInstruction = (Mesh?, Int, Int)
@@ -49,6 +69,8 @@ public class Renderer {
 	var renderers: [String: (any MetalRenderer)] = [:]
 	var size: CGSize = CGSize(width: 1, height: 1)
 
+	var buffers: [ObjectIdentifier: MTLBuffer] = [:]
+
 	public struct Error: Swift.Error, LocalizedError {
 		public let id: String
 		public let error: Swift.Error
@@ -70,6 +92,7 @@ public class Renderer {
 				}
 			}
 		}
+
 	}
 
 	public func prepared(for scene: Scene3D) -> Bool {
@@ -113,19 +136,26 @@ public class Renderer {
 		guard let depthTexture else { return }
 
 		let aspect = Float(size.width) / Float(size.height)
+		camera.withAspect(aspect).uniform.allocateAndWrite(
+			for: device, buffer: &buffers[ObjectIdentifier(CameraUniform.self)])
+		for (k, v) in scene.uniforms {
+			v.allocateAndWrite(for: device, buffer: &buffers[k])
+		}
 
 		renderPassDescriptor.depthAttachment.texture = depthTexture
 		renderPassDescriptor.depthAttachment.clearDepth = 1.0
 		renderPassDescriptor.depthAttachment.loadAction = .clear
 		renderPassDescriptor.depthAttachment.storeAction = .store
 		renderPassDescriptor.depthAttachment.loadAction = .clear
-
 		renderPassDescriptor.colorAttachments[0].loadAction = .clear
 
 		let context = RenderContext(
-			scene: scene, camera: camera.withAspect(aspect), renderPassDescriptor: renderPassDescriptor,
+			scene: scene, camera: camera.withAspect(aspect),
+			renderPassDescriptor: renderPassDescriptor,
 			commandBuffer: commandBuffer, depthTexture: depthTexture,
-			cache: meshCache)
+			cache: meshCache,
+			buffers: buffers,
+		)
 
 		for g in scene.renderGroups.sorted(by: { a, b in a.order < b.order }) {
 			guard let renderer = renderers[g.id] else { continue }

@@ -48,8 +48,8 @@ public class OpaqueRenderer: MetalRenderer {
 		renderEncoder.setDepthStencilState(depthState)
 
 		if let (instancesBuffer, instructions) = group.storage.renderInfo(cache: ctx.cache) {
-			group.storage.updateBuffers(device: device, camera: ctx.camera, scene: ctx.scene)
-			group.storage.bindBuffers(to: renderEncoder)
+			ctx.bindBuffer(of: CameraUniform.self, to: renderEncoder, index: 1)
+			ctx.bindBuffer(of: SceneUniform.self, to: renderEncoder, index: 2)
 
 			for (mesh, offset, count) in instructions {
 				guard let mesh else { continue }
