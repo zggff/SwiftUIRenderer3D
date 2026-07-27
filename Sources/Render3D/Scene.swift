@@ -56,7 +56,7 @@ public final class Scene3D {
 		finishDeclaration()
 	}
 
-	public func storage(for id: String) -> ObjectStorage? {
+	public func storage(for id: RenderGroup.ID) -> ObjectStorage? {
 		return self.renderGroups.first(where: { n in n.id == id })?.storage
 	}
 
@@ -64,17 +64,17 @@ public final class Scene3D {
 		fileprivate var scene: Scene3D
 
 		public func draw<T: Renderable3D>(_ objects: [T]) {
-			scene.storage(for: RenderGroup.opaqueID)?.append(objects.filter(\.opaque))
-			scene.storage(for: RenderGroup.transparentID)?.append(objects.filter(\.transparent))
+			scene.storage(for: .opaque)?.append(objects.filter(\.opaque))
+			scene.storage(for: .transparent)?.append(objects.filter(\.transparent))
 		}
 		public func draw<T: Renderable3D>(_ object: T) {
 			draw([object])
 		}
 
-		public func draw<T: Renderable>(_ objects: [T], in id: String) {
+		public func draw<T: Renderable>(_ objects: [T], in id: RenderGroup.ID) {
 			scene.storage(for: id)?.append(objects)
 		}
-		public func draw<T: Renderable>(_ object: T, in id: String) {
+		public func draw<T: Renderable>(_ object: T, in id: RenderGroup.ID) {
 			draw([object], in: id)
 		}
 

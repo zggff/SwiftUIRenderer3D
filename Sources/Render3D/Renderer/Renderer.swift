@@ -66,7 +66,7 @@ public class Renderer {
 	var depthTexture: MTLTexture?
 	var meshCache: MeshCache
 
-	var renderers: [String: (any MetalRenderer)] = [:]
+	var renderers: [RenderGroup.ID: (any MetalRenderer)] = [:]
 	var size: CGSize = CGSize(width: 1, height: 1)
 
 	var buffers: [ObjectIdentifier: MTLBuffer] = [:]
@@ -88,7 +88,7 @@ public class Renderer {
 		for g in scene.renderGroups {
 			if renderers[g.id] == nil {
 				do { renderers[g.id] = try g.rendererType.init(device: device) } catch {
-					throw Self.Error(id: g.id, error: error)
+					throw Self.Error(id: g.id.rawValue, error: error)
 				}
 			}
 		}

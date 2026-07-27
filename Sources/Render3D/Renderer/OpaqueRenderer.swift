@@ -69,11 +69,14 @@ public class OpaqueRenderer: MetalRenderer {
 	}
 }
 
+extension RenderGroup.ID {
+    public static let opaque: RenderGroup.ID = "builtin.opaque"
+}
+
 extension RenderGroup {
-	public static var opaqueID: String { "builtin.opaque" }
 	public static var opaque: RenderGroup {
 		RenderGroup(
-			id: opaqueID, order: 0, renderer: OpaqueRenderer.self,
+			id: ID.opaque, order: 0, renderer: OpaqueRenderer.self,
 			storage: CachedObjectStorage.self)
 	}
 }

@@ -140,11 +140,14 @@ public class TransparentRenderer: MetalRenderer {
 	}
 }
 
+extension RenderGroup.ID {
+	public static let transparent: RenderGroup.ID = "builtin.transparent"
+}
+
 extension RenderGroup {
-	public static var transparentID: String { "builtin.transparent" }
 	public static var transparent: RenderGroup {
 		RenderGroup(
-			id: transparentID, order: 1000, renderer: OpaqueRenderer.self,
+			id: ID.transparent, order: 1000, renderer: TransparentRenderer.self,
 			storage: CachedObjectStorage.self)
 	}
 }
