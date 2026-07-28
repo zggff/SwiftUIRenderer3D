@@ -1,93 +1,120 @@
 import Metal
 
+public struct DrawInstruction {
+	public init(mesh: Mesh? = nil, offset: Int, count: Int) {
+		self.mesh = mesh
+		self.offset = offset
+		self.count = count
+	}
+
+	public let mesh: Mesh?
+	public let offset: Int
+	public let count: Int
+}
+
+public struct UniformRetrieavalError: Error, LocalizedError {
+	let expected: Any.Type
+	let from: Any.Type
+	public var errorDescription: String? {
+		return "Failed to create uniform '\(expected)' from '\(from)'."
+	}
+}
+
 public protocol ObjectStorage: AnyObject {
 	init()
-
 	var count: Int { get }
 	func append<T: Renderable>(_ objects: [T])
 	func removeAll()
-	func renderInfo(cache: MeshCache) -> (MTLBuffer, [DrawInstruction])?
+	func renderInfo<T: Uniform>(
+		device: MTLDevice, cache: MeshCache, buffer: inout MTLBuffer?, as targetType: T.Type
+	) throws -> [DrawInstruction]?
 }
 
-public class CachedObjectStorage: ObjectStorage {
-	typealias Element = any Renderable3D
-
-	var cachable: [ObjectIdentifier: [Element]] = [:]
-	var nonCachable: [Element] = []
-	var instructions: [DrawInstruction] = []
-	var shouldUpdate: Bool = false
-	public private(set) var count: Int = 0
-	var buffer: MTLBuffer? = nil
-
-	var requiredBufferSize: Int {
-		count * MemoryLayout<InstanceUniform>.stride
-	}
-
-	public required init() {}
-
-	func allocBuffer(device: MTLDevice) {
-		let size = requiredBufferSize
+extension ObjectStorage {
+	public func allocBuffer(device: MTLDevice, buffer: inout MTLBuffer?, stride: Int) {
+		let size = count * stride
 		guard size > 0 else { return }
 		if let buffer = buffer, buffer.length >= size { return }
 		buffer = device.makeBuffer(length: size)
 	}
+    @discardableResult
+	public func writeToBuffer<T: Uniform>(
+		buffer: MTLBuffer, objects: [any Renderable], offset: Int, of: T.Type
+	) throws -> Int {
+		return try buffer.write(
+			objects, offset: offset,
+			transform: { item in
+				guard let uniform = item.uniform(of: of) else {
+					throw UniformRetrieavalError(
+						expected: T.self,
+						from: type(of: item)
+					)
+				}
+				return uniform
+			})
+
+	}
+}
+
+public class GroupedObjectStorage: ObjectStorage {
+	typealias Element = any Renderable
+	var storage: [ObjectIdentifier: [Element]] = [:]
+	var instructions: [DrawInstruction] = []
+
+	public var count: Int {
+		storage.values.map(\.count).reduce(0, +)
+	}
+
+	public required init() {}
 
 	public func append<T: Renderable>(_ objects: [T]) {
 		guard !objects.isEmpty else { return }
-		guard let objects = objects as? [Element] else { return }
-		shouldUpdate = true
-		count += objects.count
 
-		if T.cachable {
-			let id = ObjectIdentifier(T.self)
-			if cachable[id] == nil {
-				cachable[id] = []
-			}
-			cachable[id]?.append(contentsOf: objects)
-		} else {
-			nonCachable.append(contentsOf: objects)
+		let id = ObjectIdentifier(T.self)
+		if storage[id] == nil {
+			storage[id] = []
 		}
+		storage[id]?.append(contentsOf: objects)
+		instructions.removeAll(keepingCapacity: true)
 	}
 
 	public func removeAll() {
-		shouldUpdate = true
-		count = 0
-
-		for index in cachable.values.indices {
-			cachable.values[index].removeAll(keepingCapacity: true)
-		}
-		nonCachable.removeAll(keepingCapacity: true)
-	}
-
-	public func renderInfo(cache: MeshCache) -> (MTLBuffer, [DrawInstruction])? {
-		createDrawInstructions(cache: cache)
-		guard let buffer = buffer else { return nil }
-		return (buffer, instructions)
-	}
-
-	func createDrawInstructions(cache: MeshCache) {
-		guard shouldUpdate else { return }
-		allocBuffer(device: cache.device)
-		guard let buffer else { return }
-
-		shouldUpdate = false
+		storage = [:]
 		instructions.removeAll(keepingCapacity: true)
+	}
+
+	public func renderInfo<T: Uniform>(
+		device: MTLDevice, cache: MeshCache, buffer: inout MTLBuffer?, as targetType: T.Type
+	) throws -> [DrawInstruction]? {
+		guard count > 0 else {
+			return nil
+		}
+		guard instructions.isEmpty else {
+			return instructions
+		}
+
+		allocBuffer(device: device, buffer: &buffer, stride: MemoryLayout<T>.stride)
+		guard let buffer else { return nil }
 
 		var offset = 0
-		for objects in cachable.values {
+		for objects in storage.values {
 			guard let first = objects.first else { continue }
 			let mesh = cache.mesh(for: first)
-			instructions.append((mesh, offset, objects.count))
-			offset += buffer.write(objects, offset: offset, transform: (\.uniform))
+			instructions.append(DrawInstruction(mesh: mesh, offset: offset, count: objects.count))
+			offset += try writeToBuffer(
+				buffer: buffer, objects: objects, offset: offset, of: targetType)
+			//         try buffer.write(
+			// objects, offset: offset,
+			// transform: { item in
+			// 	guard let uniform = item.uniform(of: targetType) else {
+			// 		throw UniformRetrieavalError(
+			// 			expected: T.self,
+			// 			from: type(of: item)
+			// 		)
+			// 	}
+			// 	return uniform
+			// })
 		}
-
-		guard !nonCachable.isEmpty else { return }
-
-		for (index, object) in nonCachable.enumerated() {
-			let mesh = cache.mesh(for: object)
-			let instanceOffset = offset + index * MemoryLayout<InstanceUniform>.stride
-			instructions.append((mesh, instanceOffset, 1))
-		}
-		offset += buffer.write(nonCachable, offset: offset, transform: (\.uniform))
+		return instructions
 	}
 }

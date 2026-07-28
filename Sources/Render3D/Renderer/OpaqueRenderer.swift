@@ -7,6 +7,7 @@ public class OpaqueRenderer: MetalRenderer {
 	let pipeline: MTLRenderPipelineState
 	let depthState: MTLDepthStencilState
 	let library: Library
+	var instancesBuffer: MTLBuffer? = nil
 
 	public required init(device: any MTLDevice) throws {
 		self.device = device
@@ -38,7 +39,7 @@ public class OpaqueRenderer: MetalRenderer {
 
 	public func update(drawableSize size: CGSize) {}
 
-	public func draw(context ctx: RenderContext, group: RenderGroup) {
+	public func draw(context ctx: RenderContext, group: RenderGroup) throws {
 		guard
 			let renderEncoder = ctx.commandBuffer.makeRenderCommandEncoder(
 				descriptor: ctx.renderPassDescriptor)
@@ -47,21 +48,23 @@ public class OpaqueRenderer: MetalRenderer {
 		renderEncoder.setRenderPipelineState(pipeline)
 		renderEncoder.setDepthStencilState(depthState)
 
-		if let (instancesBuffer, instructions) = group.storage.renderInfo(cache: ctx.cache) {
+		if let instructions = try group.storage.renderInfo(
+			device: device, cache: ctx.cache, buffer: &instancesBuffer, as: InstanceUniform.self)
+		{
 			ctx.bindBuffer(of: CameraUniform.self, to: renderEncoder, index: 1)
 			ctx.bindBuffer(of: SceneUniform.self, to: renderEncoder, index: 2)
 
-			for (mesh, offset, count) in instructions {
-				guard let mesh else { continue }
+			for i in instructions {
+				guard let mesh = i.mesh else { continue }
 				renderEncoder.setCullMode(mesh.cullMode)
 				renderEncoder.setVertexBuffer(mesh.vertex, offset: 0, index: 0)
-				renderEncoder.setVertexBuffer(instancesBuffer, offset: offset, index: 3)
-				renderEncoder.setFragmentBuffer(instancesBuffer, offset: offset, index: 3)
+				renderEncoder.setVertexBuffer(instancesBuffer, offset: i.offset, index: 3)
+				renderEncoder.setFragmentBuffer(instancesBuffer, offset: i.offset, index: 3)
 
 				renderEncoder.drawIndexedPrimitives(
 					type: .triangle, indexCount: mesh.count, indexType: mesh.indexType,
 					indexBuffer: mesh.index,
-					indexBufferOffset: 0, instanceCount: count)
+					indexBufferOffset: 0, instanceCount: i.count)
 			}
 		}
 
@@ -70,13 +73,13 @@ public class OpaqueRenderer: MetalRenderer {
 }
 
 extension RenderGroup.ID {
-    public static let opaque: RenderGroup.ID = "builtin.opaque"
+	public static let opaque: RenderGroup.ID = "builtin.opaque"
 }
 
 extension RenderGroup {
 	public static var opaque: RenderGroup {
 		RenderGroup(
 			id: ID.opaque, order: 0, renderer: OpaqueRenderer.self,
-			storage: CachedObjectStorage.self)
+			storage: GroupedObjectStorage.self)
 	}
 }

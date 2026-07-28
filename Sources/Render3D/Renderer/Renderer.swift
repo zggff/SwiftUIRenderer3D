@@ -3,7 +3,7 @@ import Metal
 public protocol MetalRenderer: AnyObject {
 	init(device: any MTLDevice) throws
 	func update(drawableSize size: CGSize)
-	func draw(context: RenderContext, group: RenderGroup)
+	func draw(context: RenderContext, group: RenderGroup) throws
 }
 
 public struct RenderContext {
@@ -36,30 +36,6 @@ public struct RenderContext {
 
 }
 
-public typealias DrawInstruction = (Mesh?, Int, Int)
-
-public class MeshCache {
-	var meshCache: [ObjectIdentifier: Mesh] = [:]
-	public private(set) var device: any MTLDevice
-
-	init(device: MTLDevice) {
-		self.device = device
-	}
-
-	public func mesh(for obj: any Renderable) -> Mesh? {
-		let objType = type(of: obj)
-		guard objType.cachable else {
-			return obj.mesh(for: device)
-		}
-		let id = ObjectIdentifier(objType)
-		guard let mesh = meshCache[id] else {
-			let mesh = obj.mesh(for: device)
-			meshCache[id] = mesh
-			return mesh
-		}
-		return mesh
-	}
-}
 
 public class Renderer {
 	let device: any MTLDevice
@@ -159,7 +135,7 @@ public class Renderer {
 
 		for g in scene.renderGroups.sorted(by: { a, b in a.order < b.order }) {
 			guard let renderer = renderers[g.id] else { continue }
-			renderer.draw(context: context, group: g)
+			try renderer.draw(context: context, group: g)
 			renderPassDescriptor.colorAttachments[0].loadAction = .load
 			renderPassDescriptor.depthAttachment.loadAction = .load
 		}

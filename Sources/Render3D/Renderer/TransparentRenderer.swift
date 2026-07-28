@@ -10,6 +10,8 @@ public class TransparentRenderer: MetalRenderer {
 	private let compositionPipelineState: MTLRenderPipelineState
 	private let depthStateTransparent: MTLDepthStencilState
 
+	var instancesBuffer: MTLBuffer? = nil
+
 	public required init(device: MTLDevice) throws {
 		self.device = device
 
@@ -83,7 +85,7 @@ public class TransparentRenderer: MetalRenderer {
 		updateTextures(size: size)
 	}
 
-	public func draw(context ctx: RenderContext, group: RenderGroup) {
+	public func draw(context ctx: RenderContext, group: RenderGroup) throws {
 		guard let accum = accumTexture, let reveal = revealTexture else { return }
 
 		let pass = MTLRenderPassDescriptor()
@@ -107,20 +109,22 @@ public class TransparentRenderer: MetalRenderer {
 		encoder.setRenderPipelineState(accumulationPipelineState)
 		encoder.setDepthStencilState(depthStateTransparent)
 
-		if let (instancesBuffer, instructions) = group.storage.renderInfo(cache: ctx.cache) {
+		if let instructions = try group.storage.renderInfo(
+			device: device, cache: ctx.cache, buffer: &instancesBuffer, as: InstanceUniform.self)
+		{
 			ctx.bindBuffer(of: CameraUniform.self, to: encoder, index: 1)
 			ctx.bindBuffer(of: SceneUniform.self, to: encoder, index: 2)
 
-			for (mesh, offset, count) in instructions {
-				guard let mesh else { continue }
+			for i in instructions {
+				guard let mesh = i.mesh else { continue }
 				encoder.setCullMode(mesh.cullMode)
 				encoder.setVertexBuffer(mesh.vertex, offset: 0, index: 0)
-				encoder.setVertexBuffer(instancesBuffer, offset: offset, index: 3)
-				encoder.setFragmentBuffer(instancesBuffer, offset: offset, index: 3)
+				encoder.setVertexBuffer(instancesBuffer, offset: i.offset, index: 3)
+				encoder.setFragmentBuffer(instancesBuffer, offset: i.offset, index: 3)
 
 				encoder.drawIndexedPrimitives(
 					type: .triangle, indexCount: mesh.count, indexType: mesh.indexType,
-					indexBuffer: mesh.index, indexBufferOffset: 0, instanceCount: count
+					indexBuffer: mesh.index, indexBufferOffset: 0, instanceCount: i.count
 				)
 			}
 		}
@@ -148,6 +152,6 @@ extension RenderGroup {
 	public static var transparent: RenderGroup {
 		RenderGroup(
 			id: ID.transparent, order: 1000, renderer: TransparentRenderer.self,
-			storage: CachedObjectStorage.self)
+			storage: GroupedObjectStorage.self)
 	}
 }

@@ -13,7 +13,7 @@ extension UInt32: MetalIndex {
 	public static let metalIndexType: MTLIndexType = .uint32
 }
 
-public struct Mesh: @unchecked Sendable {
+public struct Mesh {
 	public let vertex: MTLBuffer
 	public let index: MTLBuffer
 	public let count: Int
@@ -50,7 +50,9 @@ public struct Mesh: @unchecked Sendable {
 		}
 		guard let vertex, let index else { return nil }
 
-		self.init(vertex: vertex, index: index, count: indices.count, indexType: I.metalIndexType, cullMode: cullMode)
+		self.init(
+			vertex: vertex, index: index, count: indices.count, indexType: I.metalIndexType,
+			cullMode: cullMode)
 	}
 
 	public static func cube(_ device: MTLDevice) -> Mesh? {

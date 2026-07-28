@@ -47,8 +47,8 @@ extension MTLBuffer {
 	public func write<S: Collection, U>(
 		_ objects: S,
 		offset: Int = 0,
-		transform: (S.Element) -> U
-	) -> Int {
+		transform: (S.Element) throws -> U
+	) rethrows -> Int {
 		let stride = MemoryLayout<U>.stride
 		let pointer = self.contents()
 			.advanced(by: offset)
@@ -59,10 +59,10 @@ extension MTLBuffer {
 
 		var count = 0
 		for (index, object) in objects.enumerated() {
-			bufferPointer[index] = transform(object)
+			bufferPointer[index] = try transform(object)
 			count += 1
 		}
-
 		return count * stride
 	}
+
 }
