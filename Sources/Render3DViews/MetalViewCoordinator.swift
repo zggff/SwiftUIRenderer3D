@@ -36,7 +36,6 @@ public class MetalViewCoordinator: NSObject, MTKViewDelegate {
 				scene: parent.scene, camera: parent.camera,
 				renderPassDescriptor: renderPassDescriptor,
 				commandBuffer: commandBuffer)
-			parent.onError?(nil)
 		} catch {
 			parent.onError?(error)
 		}
