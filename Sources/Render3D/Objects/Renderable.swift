@@ -15,16 +15,16 @@ extension Renderable {
 	}
 }
 
-public protocol InstanceUniformProvider: Renderable {
+public protocol InstancedRenderable: Renderable {
 	var model: Matrix { get }
 	var color: Vec4 { get }
 }
 
 extension Uniforms.Instance {
 	public static func from(_ item: any Renderable) throws -> Self {
-		guard let item = item as? any InstanceUniformProvider else {
+		guard let item = item as? any InstancedRenderable else {
 			throw RenderError.uniform(
-				expected: (any InstanceUniformProvider).self,
+				expected: (any InstancedRenderable).self,
 				from: type(of: item)
 			)
 		}
@@ -32,7 +32,7 @@ extension Uniforms.Instance {
 	}
 }
 
-extension InstanceUniformProvider {
+extension InstancedRenderable {
 	public var opaque: Bool { color.w == 1 }
 	public var transparent: Bool { color.w < 1 }
 

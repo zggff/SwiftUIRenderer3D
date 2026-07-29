@@ -8,7 +8,7 @@ extension MeshID {
 }
 
 public enum Primitive {
-	public struct Cube: InstanceUniformProvider {
+	public struct Cube: InstancedRenderable {
 		public init(center: Vec3, size: Float, color: Vec4) {
 			self.center = center
 			self.size = Vec3(size, size, size)
@@ -31,7 +31,7 @@ public enum Primitive {
 			return try Mesh.cube(device)
 		}
 	}
-	public struct Sphere: InstanceUniformProvider {
+	public struct Sphere: InstancedRenderable {
 		public init(center: Vec3, radius: Float, color: Vec4, vertexCnt: Int = 30) {
 			self.center = center
 			self.radius = radius

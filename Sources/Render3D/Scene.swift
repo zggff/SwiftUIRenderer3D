@@ -63,11 +63,11 @@ public final class Scene3D {
 	public struct Context {
 		fileprivate var scene: Scene3D
 
-		public func draw(_ objects: [any InstanceUniformProvider]) {
+		public func draw(_ objects: [any InstancedRenderable]) {
 			scene.storage(for: .opaque)?.append(objects.filter(\.opaque))
 			scene.storage(for: .transparent)?.append(objects.filter(\.transparent))
 		}
-		public func draw(_ object: any InstanceUniformProvider) {
+		public func draw(_ object: any InstancedRenderable) {
 			draw([object])
 		}
 
