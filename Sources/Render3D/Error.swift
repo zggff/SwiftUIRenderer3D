@@ -7,6 +7,8 @@ public enum RenderError: LocalizedError {
 	case uniform(
 		expected: Any.Type, from: Any.Type
 	)
+	case allocation(size: Int, type: Any.Type)
+	case mesh
 
 	public var errorDescription: String? {
 		switch self {
@@ -18,6 +20,11 @@ public enum RenderError: LocalizedError {
 					"RenderPipeline [\(id)] failed with \(error.localizedDescription)"
 			case .uniform(let expected, let from):
 				return "Failed to create uniform '\(expected)' from '\(from)'."
+			case .allocation(let size, let type):
+				return "Failed to allocate '\(size)' bytes for '\(type)'."
+			case .mesh:
+				return "Mesh must not be empty"
+
 		}
 	}
 

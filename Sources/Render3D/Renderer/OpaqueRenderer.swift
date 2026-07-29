@@ -57,15 +57,14 @@ public class OpaqueRenderer: MetalRenderer {
 		ctx.bindBuffer(of: Uniforms.SceneLight.self, to: renderEncoder, index: 2)
 
 		for i in instructions {
-			guard let mesh = i.mesh else { continue }
-			renderEncoder.setCullMode(mesh.cullMode)
-			renderEncoder.setVertexBuffer(mesh.vertex, offset: 0, index: 0)
+			renderEncoder.setCullMode(i.mesh.cullMode)
+			renderEncoder.setVertexBuffer(i.mesh.vertex, offset: 0, index: 0)
 			renderEncoder.setVertexBuffer(instancesBuffer, offset: i.offset, index: 3)
 			renderEncoder.setFragmentBuffer(instancesBuffer, offset: i.offset, index: 3)
 
 			renderEncoder.drawIndexedPrimitives(
-				type: .triangle, indexCount: mesh.count, indexType: mesh.indexType,
-				indexBuffer: mesh.index,
+				type: .triangle, indexCount: i.mesh.count, indexType: i.mesh.indexType,
+				indexBuffer: i.mesh.index,
 				indexBufferOffset: 0, instanceCount: i.count)
 		}
 

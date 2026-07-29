@@ -120,15 +120,14 @@ public class TransparentRenderer: MetalRenderer {
 		ctx.bindBuffer(of: Uniforms.SceneLight.self, to: encoder, index: 2)
 
 		for i in instructions {
-			guard let mesh = i.mesh else { continue }
-			encoder.setCullMode(mesh.cullMode)
-			encoder.setVertexBuffer(mesh.vertex, offset: 0, index: 0)
+			encoder.setCullMode(i.mesh.cullMode)
+			encoder.setVertexBuffer(i.mesh.vertex, offset: 0, index: 0)
 			encoder.setVertexBuffer(instancesBuffer, offset: i.offset, index: 3)
 			encoder.setFragmentBuffer(instancesBuffer, offset: i.offset, index: 3)
 
 			encoder.drawIndexedPrimitives(
-				type: .triangle, indexCount: mesh.count, indexType: mesh.indexType,
-				indexBuffer: mesh.index, indexBufferOffset: 0, instanceCount: i.count
+				type: .triangle, indexCount: i.mesh.count, indexType: i.mesh.indexType,
+				indexBuffer: i.mesh.index, indexBufferOffset: 0, instanceCount: i.count
 			)
 		}
 		encoder.endEncoding()

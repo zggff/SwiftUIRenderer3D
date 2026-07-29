@@ -4,8 +4,15 @@ import Synchronization
 import simd
 
 public protocol Renderable {
-	func mesh(for device: MTLDevice) -> Mesh?
-	static var cachable: Bool { get }
+	func mesh(for device: MTLDevice) throws -> Mesh?
+	var meshId: MeshID { get }
+	var cachable: Bool { get }
+}
+
+extension Renderable {
+	public var cachable: Bool {
+		true
+	}
 }
 
 public protocol InstanceUniformProvider: Renderable {
@@ -43,7 +50,4 @@ extension InstanceUniformProvider {
 		return uniform
 	}
 
-	public static var cachable: Bool {
-		true
-	}
 }

@@ -31,31 +31,42 @@ public struct Mesh {
 		self.cullMode = cullMode
 	}
 
-	public init?<I: MetalIndex>(
+	public init<I: MetalIndex>(
 		_ device: MTLDevice, vertices: [Vertex], indices: [I], cullMode: MTLCullMode = .back
-	) {
-		guard !vertices.isEmpty, !indices.isEmpty else { return nil }
-
-		let vertex = vertices.withUnsafeBytes { vPtr in
-			device.makeBuffer(
-				bytes: vPtr.baseAddress!,
-				length: vPtr.count,
+	) throws {
+		guard !vertices.isEmpty, !indices.isEmpty else { throw RenderError.mesh }
+		guard
+			let vertex = vertices.withUnsafeBytes({ vPtr in
+				device.makeBuffer(
+					bytes: vPtr.baseAddress!,
+					length: vPtr.count,
+				)
+			})
+		else {
+			throw RenderError.allocation(
+				size: vertices.count * MemoryLayout<Vertex>.stride,
+				type: Vertex.self
 			)
 		}
-		let index = indices.withUnsafeBytes { iPtr in
-			device.makeBuffer(
-				bytes: iPtr.baseAddress!,
-				length: iPtr.count,
+		guard
+			let index = indices.withUnsafeBytes({ iPtr in
+				device.makeBuffer(
+					bytes: iPtr.baseAddress!,
+					length: iPtr.count,
+				)
+			})
+		else {
+			throw RenderError.allocation(
+				size: indices.count * MemoryLayout<I>.stride,
+				type: I.self
 			)
 		}
-		guard let vertex, let index else { return nil }
-
 		self.init(
 			vertex: vertex, index: index, count: indices.count, indexType: I.metalIndexType,
 			cullMode: cullMode)
 	}
 
-	public static func cube(_ device: MTLDevice) -> Mesh? {
+	public static func cube(_ device: MTLDevice) throws -> Mesh {
 		let s = Float(0.5)
 		let vertices: [Vertex] = [
 			Vertex(position: Vec3(-s, -s, s), normal: SIMD3<Float>(0, 0, 1)),
@@ -97,10 +108,10 @@ public struct Mesh {
 			16, 17, 18, 18, 19, 16,
 			20, 21, 22, 22, 23, 20,
 		]
-		return Mesh(device, vertices: vertices, indices: indices)
+		return try Mesh(device, vertices: vertices, indices: indices)
 	}
 
-	public static func sphere(_ device: MTLDevice, vertexCnt: UInt16 = 100) -> Mesh? {
+	public static func sphere(_ device: MTLDevice, vertexCnt: UInt16 = 100) throws -> Mesh {
 		var vertices: [Vertex] = []
 		var indices: [UInt16] = []
 		let radius: Float = 0.5
@@ -139,6 +150,6 @@ public struct Mesh {
 				k2 += 1
 			}
 		}
-		return Mesh(device, vertices: vertices, indices: indices)
+		return try Mesh(device, vertices: vertices, indices: indices)
 	}
 }

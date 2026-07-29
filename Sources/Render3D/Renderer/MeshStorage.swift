@@ -11,23 +11,20 @@ public struct MeshID: Hashable, ExpressibleByStringLiteral, RawRepresentable, Se
 }
 
 public class MeshCache {
-	var meshCache: [ObjectIdentifier: Mesh] = [:]
+	var meshCache: [MeshID: Mesh?] = [:]
 	public private(set) var device: any MTLDevice
 
 	init(device: MTLDevice) {
 		self.device = device
 	}
 
-	public func mesh(for obj: any Renderable) -> Mesh? {
-		let objType = type(of: obj)
-		guard objType.cachable else {
-			return obj.mesh(for: device)
-		}
-		let id = ObjectIdentifier(objType)
-		guard let mesh = meshCache[id] else {
-			let mesh = obj.mesh(for: device)
+	public func mesh(for obj: any Renderable) throws -> Mesh? {
+		let id = obj.meshId
+		if let mesh = meshCache[id] { return mesh }
+
+		let mesh = try obj.mesh(for: device)
+		if obj.cachable, let mesh {
 			meshCache[id] = mesh
-			return mesh
 		}
 		return mesh
 	}
