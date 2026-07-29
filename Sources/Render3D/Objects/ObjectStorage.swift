@@ -12,22 +12,15 @@ public struct DrawInstruction {
 	public let count: Int
 }
 
-public struct UniformRetrieavalError: Error, LocalizedError {
-	let expected: Any.Type
-	let from: Any.Type
-	public var errorDescription: String? {
-		return "Failed to create uniform '\(expected)' from '\(from)'."
-	}
-}
-
 public protocol ObjectStorage: AnyObject {
 	init()
 	var count: Int { get }
 	func append<T: Renderable>(_ objects: [T])
 	func removeAll()
-	func renderInfo<T: Uniform>(
-		device: MTLDevice, cache: MeshCache, buffer: inout MTLBuffer?, as targetType: T.Type
-	) throws -> [DrawInstruction]?
+	func renderInfo<U: Uniform>(
+		device: MTLDevice, cache: MeshCache, buffer: inout MTLBuffer?, as targetType: U.Type,
+		transform: (any Renderable) throws -> U
+	) rethrows -> [DrawInstruction]
 }
 
 extension ObjectStorage {
@@ -36,23 +29,6 @@ extension ObjectStorage {
 		guard size > 0 else { return }
 		if let buffer = buffer, buffer.length >= size { return }
 		buffer = device.makeBuffer(length: size)
-	}
-    @discardableResult
-	public func writeToBuffer<T: Uniform>(
-		buffer: MTLBuffer, objects: [any Renderable], offset: Int, of: T.Type
-	) throws -> Int {
-		return try buffer.write(
-			objects, offset: offset,
-			transform: { item in
-				guard let uniform = item.uniform(of: of) else {
-					throw UniformRetrieavalError(
-						expected: T.self,
-						from: type(of: item)
-					)
-				}
-				return uniform
-			})
-
 	}
 }
 
@@ -83,37 +59,26 @@ public class GroupedObjectStorage: ObjectStorage {
 		instructions.removeAll(keepingCapacity: true)
 	}
 
-	public func renderInfo<T: Uniform>(
-		device: MTLDevice, cache: MeshCache, buffer: inout MTLBuffer?, as targetType: T.Type
-	) throws -> [DrawInstruction]? {
+	public func renderInfo<U: Uniform>(
+		device: MTLDevice, cache: MeshCache, buffer: inout MTLBuffer?, as targetType: U.Type,
+		transform: (any Renderable) throws -> U
+	) rethrows -> [DrawInstruction] {
 		guard count > 0 else {
-			return nil
+			return []
 		}
 		guard instructions.isEmpty else {
 			return instructions
 		}
 
-		allocBuffer(device: device, buffer: &buffer, stride: MemoryLayout<T>.stride)
-		guard let buffer else { return nil }
+		allocBuffer(device: device, buffer: &buffer, stride: MemoryLayout<U>.stride)
+		guard let buffer else { return [] }
 
 		var offset = 0
 		for objects in storage.values {
 			guard let first = objects.first else { continue }
 			let mesh = cache.mesh(for: first)
 			instructions.append(DrawInstruction(mesh: mesh, offset: offset, count: objects.count))
-			offset += try writeToBuffer(
-				buffer: buffer, objects: objects, offset: offset, of: targetType)
-			//         try buffer.write(
-			// objects, offset: offset,
-			// transform: { item in
-			// 	guard let uniform = item.uniform(of: targetType) else {
-			// 		throw UniformRetrieavalError(
-			// 			expected: T.self,
-			// 			from: type(of: item)
-			// 		)
-			// 	}
-			// 	return uniform
-			// })
+            offset += try buffer.write(objects, offset: offset, transform: transform)
 		}
 		return instructions
 	}

@@ -47,14 +47,6 @@ public class Renderer {
 
 	var buffers: [ObjectIdentifier: MTLBuffer] = [:]
 
-	public struct Error: Swift.Error, LocalizedError {
-		public let id: String
-		public let error: Swift.Error
-		public var errorDescription: String? {
-			return "[\(id)] \(error.localizedDescription)"
-		}
-	}
-
 	public required init(device: any MTLDevice) {
 		self.device = device
 		self.meshCache = MeshCache(device: device)
@@ -64,7 +56,7 @@ public class Renderer {
 		for g in scene.renderGroups {
 			if renderers[g.id] == nil {
 				do { renderers[g.id] = try g.rendererType.init(device: device) } catch {
-					throw Self.Error(id: g.id.rawValue, error: error)
+					throw RenderError.pipeline(id: g.id.rawValue, error: error)
 				}
 			}
 		}
@@ -113,7 +105,7 @@ public class Renderer {
 
 		let aspect = Float(size.width) / Float(size.height)
 		camera.withAspect(aspect).uniform.allocateAndWrite(
-			for: device, buffer: &buffers[ObjectIdentifier(CameraUniform.self)])
+			for: device, buffer: &buffers[ObjectIdentifier(Uniforms.Camera.self)])
 		for (k, v) in scene.uniforms {
 			v.allocateAndWrite(for: device, buffer: &buffers[k])
 		}

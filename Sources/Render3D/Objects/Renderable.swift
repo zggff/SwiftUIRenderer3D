@@ -5,24 +5,32 @@ import simd
 
 public protocol Renderable {
 	func mesh(for device: MTLDevice) -> Mesh?
-	func uniform<T: Uniform>(of type: T.Type) -> T?
 	static var cachable: Bool { get }
 }
 
-public protocol Renderable3D: Renderable {
+public protocol InstanceUniformProvider: Renderable {
 	var model: Matrix { get }
 	var color: Vec4 { get }
 }
 
-extension Renderable3D {
+extension Uniforms.Instance {
+	public static func from(_ item: any Renderable) throws -> Self {
+		guard let item = item as? any InstanceUniformProvider else {
+			throw RenderError.uniform(
+				expected: (any InstanceUniformProvider).self,
+				from: type(of: item)
+			)
+		}
+		return item.uniform()
+	}
+}
+
+extension InstanceUniformProvider {
 	public var opaque: Bool { color.w == 1 }
 	public var transparent: Bool { color.w < 1 }
 
-	public func uniform<T: Uniform>(of type: T.Type) -> T? {
-		if type != InstanceUniform.self {
-            return nil
-		}
-		var uniform = InstanceUniform()
+	public func uniform() -> Uniforms.Instance {
+		var uniform = Uniforms.Instance()
 		uniform.model = model
 		uniform.color = color
 		uniform.normal = float3x3(
@@ -32,7 +40,7 @@ extension Renderable3D {
 				Vec3(model.columns.2.x, model.columns.2.y, model.columns.2.z)
 			))
 		uniform.shininess = 10
-		return uniform as? T
+		return uniform
 	}
 
 	public static var cachable: Bool {

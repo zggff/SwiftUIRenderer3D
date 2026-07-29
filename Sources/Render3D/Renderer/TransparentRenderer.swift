@@ -86,7 +86,14 @@ public class TransparentRenderer: MetalRenderer {
 	}
 
 	public func draw(context ctx: RenderContext, group: RenderGroup) throws {
-		guard let accum = accumTexture, let reveal = revealTexture else { return }
+		guard
+			let accum = accumTexture, let reveal = revealTexture
+		else { return }
+
+		let instructions = try group.storage.renderInfo(
+			device: device, cache: ctx.cache, buffer: &instancesBuffer, as: Uniforms.Instance.self,
+			transform: Uniforms.Instance.from
+		)
 
 		let pass = MTLRenderPassDescriptor()
 		pass.colorAttachments[0].texture = accum
@@ -109,24 +116,20 @@ public class TransparentRenderer: MetalRenderer {
 		encoder.setRenderPipelineState(accumulationPipelineState)
 		encoder.setDepthStencilState(depthStateTransparent)
 
-		if let instructions = try group.storage.renderInfo(
-			device: device, cache: ctx.cache, buffer: &instancesBuffer, as: InstanceUniform.self)
-		{
-			ctx.bindBuffer(of: CameraUniform.self, to: encoder, index: 1)
-			ctx.bindBuffer(of: SceneUniform.self, to: encoder, index: 2)
+		ctx.bindBuffer(of: Uniforms.Camera.self, to: encoder, index: 1)
+		ctx.bindBuffer(of: Uniforms.SceneLight.self, to: encoder, index: 2)
 
-			for i in instructions {
-				guard let mesh = i.mesh else { continue }
-				encoder.setCullMode(mesh.cullMode)
-				encoder.setVertexBuffer(mesh.vertex, offset: 0, index: 0)
-				encoder.setVertexBuffer(instancesBuffer, offset: i.offset, index: 3)
-				encoder.setFragmentBuffer(instancesBuffer, offset: i.offset, index: 3)
+		for i in instructions {
+			guard let mesh = i.mesh else { continue }
+			encoder.setCullMode(mesh.cullMode)
+			encoder.setVertexBuffer(mesh.vertex, offset: 0, index: 0)
+			encoder.setVertexBuffer(instancesBuffer, offset: i.offset, index: 3)
+			encoder.setFragmentBuffer(instancesBuffer, offset: i.offset, index: 3)
 
-				encoder.drawIndexedPrimitives(
-					type: .triangle, indexCount: mesh.count, indexType: mesh.indexType,
-					indexBuffer: mesh.index, indexBufferOffset: 0, instanceCount: i.count
-				)
-			}
+			encoder.drawIndexedPrimitives(
+				type: .triangle, indexCount: mesh.count, indexType: mesh.indexType,
+				indexBuffer: mesh.index, indexBufferOffset: 0, instanceCount: i.count
+			)
 		}
 		encoder.endEncoding()
 

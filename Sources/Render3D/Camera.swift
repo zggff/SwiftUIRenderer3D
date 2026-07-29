@@ -34,13 +34,13 @@ public struct Camera {
 		return new
 	}
 
-	public var uniform: CameraUniform {
+	public var uniform: Uniforms.Camera {
 		let projection = Matrix.projection(
 			projectionFov: Float(70).degrees,
 			near: 1,
 			far: 1000,
 			aspect: aspect)
-		return CameraUniform(
+		return Uniforms.Camera(
 			projection: projection, view: view, position: position)
 
 	}

@@ -15,8 +15,8 @@ public final class Scene3D {
 	}
 
 	public var uniforms: [ObjectIdentifier: any Uniform] = [
-		ObjectIdentifier(SceneUniform.self):
-			SceneUniform(
+		ObjectIdentifier(Uniforms.SceneLight.self):
+			Uniforms.SceneLight(
 				lightDirection: [0, 1, 0],
 				lightColor: [1, 1, 1],
 				diffuseStrength: 0.0,
@@ -63,11 +63,11 @@ public final class Scene3D {
 	public struct Context {
 		fileprivate var scene: Scene3D
 
-		public func draw<T: Renderable3D>(_ objects: [T]) {
+		public func draw<T: InstanceUniformProvider>(_ objects: [T]) {
 			scene.storage(for: .opaque)?.append(objects.filter(\.opaque))
 			scene.storage(for: .transparent)?.append(objects.filter(\.transparent))
 		}
-		public func draw<T: Renderable3D>(_ object: T) {
+		public func draw<T: InstanceUniformProvider>(_ object: T) {
 			draw([object])
 		}
 

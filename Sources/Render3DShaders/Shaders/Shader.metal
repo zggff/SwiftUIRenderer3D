@@ -14,7 +14,6 @@ vertex VertexOutput vertexMain(Vertex v [[stage_in]],
     float4 worldPosition = instance.model * float4(v.position, 1.0);
 
     data.position = camera.projection * camera.view * worldPosition;
-    if (instance.skipLight) return data;
 
     data.worldPosition = worldPosition.xyz;
     data.instanceID = instanceID;
@@ -34,7 +33,6 @@ fragment half4 fragmentMain(VertexOutput frag [[stage_in]],
     }
 
     InstanceUniform instance = models[frag.instanceID];
-    if (instance.skipLight) return half4(half3(instance.color.rgb), half(instance.color.a));
 
     float3 lightDir = normalize(scene.lightDirection);
 

@@ -35,8 +35,6 @@ struct InstanceUniform {
   matrix_float3x3 normal;
   vector_float4 color;
   float shininess;
-
-  int skipLight;
 };
 
 #endif

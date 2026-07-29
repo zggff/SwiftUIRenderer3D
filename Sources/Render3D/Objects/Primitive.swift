@@ -1,7 +1,8 @@
 import Metal
+import simd
 
 public enum Primitive {
-	public struct Cube: Renderable3D {
+	public struct Cube: InstanceUniformProvider {
 		public init(center: Vec3, size: Float, color: Vec4) {
 			self.center = center
 			self.size = Vec3(size, size, size)
@@ -23,7 +24,7 @@ public enum Primitive {
 			return Mesh.cube(device)
 		}
 	}
-	public struct Sphere: Renderable3D {
+	public struct Sphere: InstanceUniformProvider {
 		public init(center: Vec3, radius: Float, color: Vec4) {
 			self.center = center
 			self.radius = radius

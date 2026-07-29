@@ -40,6 +40,11 @@ public class OpaqueRenderer: MetalRenderer {
 	public func update(drawableSize size: CGSize) {}
 
 	public func draw(context ctx: RenderContext, group: RenderGroup) throws {
+		let instructions = try group.storage.renderInfo(
+			device: device, cache: ctx.cache, buffer: &instancesBuffer, as: Uniforms.Instance.self,
+			transform: Uniforms.Instance.from
+		)
+
 		guard
 			let renderEncoder = ctx.commandBuffer.makeRenderCommandEncoder(
 				descriptor: ctx.renderPassDescriptor)
@@ -48,24 +53,20 @@ public class OpaqueRenderer: MetalRenderer {
 		renderEncoder.setRenderPipelineState(pipeline)
 		renderEncoder.setDepthStencilState(depthState)
 
-		if let instructions = try group.storage.renderInfo(
-			device: device, cache: ctx.cache, buffer: &instancesBuffer, as: InstanceUniform.self)
-		{
-			ctx.bindBuffer(of: CameraUniform.self, to: renderEncoder, index: 1)
-			ctx.bindBuffer(of: SceneUniform.self, to: renderEncoder, index: 2)
+		ctx.bindBuffer(of: Uniforms.Camera.self, to: renderEncoder, index: 1)
+		ctx.bindBuffer(of: Uniforms.SceneLight.self, to: renderEncoder, index: 2)
 
-			for i in instructions {
-				guard let mesh = i.mesh else { continue }
-				renderEncoder.setCullMode(mesh.cullMode)
-				renderEncoder.setVertexBuffer(mesh.vertex, offset: 0, index: 0)
-				renderEncoder.setVertexBuffer(instancesBuffer, offset: i.offset, index: 3)
-				renderEncoder.setFragmentBuffer(instancesBuffer, offset: i.offset, index: 3)
+		for i in instructions {
+			guard let mesh = i.mesh else { continue }
+			renderEncoder.setCullMode(mesh.cullMode)
+			renderEncoder.setVertexBuffer(mesh.vertex, offset: 0, index: 0)
+			renderEncoder.setVertexBuffer(instancesBuffer, offset: i.offset, index: 3)
+			renderEncoder.setFragmentBuffer(instancesBuffer, offset: i.offset, index: 3)
 
-				renderEncoder.drawIndexedPrimitives(
-					type: .triangle, indexCount: mesh.count, indexType: mesh.indexType,
-					indexBuffer: mesh.index,
-					indexBufferOffset: 0, instanceCount: i.count)
-			}
+			renderEncoder.drawIndexedPrimitives(
+				type: .triangle, indexCount: mesh.count, indexType: mesh.indexType,
+				indexBuffer: mesh.index,
+				indexBufferOffset: 0, instanceCount: i.count)
 		}
 
 		renderEncoder.endEncoding()

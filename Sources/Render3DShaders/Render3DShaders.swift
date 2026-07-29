@@ -1,6 +1,16 @@
 import Foundation
 import Metal
-@_exported import Render3DShadersC
+import Render3DShadersC
+@_exported import simd
+
+
+public enum Uniforms {
+	public typealias Instance = InstanceUniform
+	public typealias Camera = CameraUniform
+	public typealias SceneLight = SceneUniform
+}
+
+public typealias Vertex = Render3DShadersC.Vertex
 
 extension Bundle {
 	public static var render3DShaders: Bundle { .module }
@@ -24,4 +34,3 @@ extension Vertex {
 		self.init(position: position, normal: [0, 0, 0])
 	}
 }
-
