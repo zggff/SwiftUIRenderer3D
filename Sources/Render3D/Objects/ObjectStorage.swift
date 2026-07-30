@@ -52,7 +52,9 @@ extension ObjectStorage {
 	public func writeDataToBuffer<U: Uniform>(
 		device: MTLDevice, buffer: inout MTLBuffer?, data: Data, targetType: U.Type
 	) throws {
-		let buffer = try allocBuffer(device: device, buffer: &buffer, data: data, targetType: targetType)
+		guard data.count > 0 else { return }
+		let buffer = try allocBuffer(
+			device: device, buffer: &buffer, data: data, targetType: targetType)
 		data.withUnsafeBytes({ ptr in
 			guard let baseAddress = ptr.baseAddress else { return }
 			buffer.contents().copyMemory(from: baseAddress, byteCount: data.count)
