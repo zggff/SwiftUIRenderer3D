@@ -1,7 +1,21 @@
 import Metal
 import Render3DShaders
 
-public class WireframeRenderer: MetalRenderer {
+public enum RenderMode {
+	public protocol Primitive {
+		static var primitiveType: MTLPrimitiveType { get }
+	}
+
+	public struct Line: Primitive {
+		public static var primitiveType: MTLPrimitiveType { .line }
+	}
+
+	public struct Triangle: Primitive {
+		public static var primitiveType: MTLPrimitiveType { .triangle }
+	}
+}
+
+public class NoLightRenderer<T: RenderMode.Primitive>: MetalRenderer {
 
 	public let device: any MTLDevice
 	let pipeline: MTLRenderPipelineState
@@ -11,13 +25,14 @@ public class WireframeRenderer: MetalRenderer {
 
 	public required init(device: any MTLDevice, frameCount: Int) throws {
 		self.device = device
-        self.instancesBuffer = RingBuffer(frameCount: frameCount)
+		self.instancesBuffer = RingBuffer(frameCount: frameCount)
 
 		let pipelineDescriptor = MTLRenderPipelineDescriptor()
 		library = try Library(type: .builtin, for: device)
 
 		pipelineDescriptor.vertexFunction = try library.makeFunction(name: "vertexMain")
-		pipelineDescriptor.fragmentFunction = try library.makeFunction(name: "fragmentWireframeMain")
+		pipelineDescriptor.fragmentFunction = try library.makeFunction(
+			name: "fragmentWireframeMain")
 		pipelineDescriptor.depthAttachmentPixelFormat = .depth32Float
 		pipelineDescriptor.vertexDescriptor = Vertex.defaultLayout
 
@@ -42,7 +57,8 @@ public class WireframeRenderer: MetalRenderer {
 
 	public func draw(context ctx: RenderContext, group: RenderGroup) throws {
 		let instructions = try group.storage.renderInfo(
-			device: device, cache: ctx.cache, buffer: &instancesBuffer[ctx.frameIndex], as: Uniforms.Instance.self,
+			device: device, cache: ctx.cache, buffer: &instancesBuffer[ctx.frameIndex],
+			as: Uniforms.Instance.self,
 			transform: Uniforms.Instance.from
 		)
 
@@ -60,11 +76,13 @@ public class WireframeRenderer: MetalRenderer {
 		for i in instructions {
 			renderEncoder.setCullMode(i.mesh.cullMode)
 			renderEncoder.setVertexBuffer(i.mesh.vertex, offset: 0, index: 0)
-			renderEncoder.setVertexBuffer(instancesBuffer[ctx.frameIndex], offset: i.offset, index: 3)
-			renderEncoder.setFragmentBuffer(instancesBuffer[ctx.frameIndex], offset: i.offset, index: 3)
+			renderEncoder.setVertexBuffer(
+				instancesBuffer[ctx.frameIndex], offset: i.offset, index: 3)
+			renderEncoder.setFragmentBuffer(
+				instancesBuffer[ctx.frameIndex], offset: i.offset, index: 3)
 
 			renderEncoder.drawIndexedPrimitives(
-				type: .line, indexCount: i.mesh.count, indexType: i.mesh.indexType,
+				type: T.primitiveType, indexCount: i.mesh.count, indexType: i.mesh.indexType,
 				indexBuffer: i.mesh.index,
 				indexBufferOffset: 0, instanceCount: i.count)
 		}
@@ -75,12 +93,19 @@ public class WireframeRenderer: MetalRenderer {
 
 extension RenderGroup.ID {
 	public static let wireframe: RenderGroup.ID = "builtin.wireframe"
+	public static let noLight: RenderGroup.ID = "builtin.noLight"
 }
 
 extension RenderGroup {
 	public static var wireframe: RenderGroup {
 		RenderGroup(
-			id: ID.wireframe, order: 0, renderer: WireframeRenderer.self,
+			id: ID.wireframe, order: 1, renderer: NoLightRenderer<RenderMode.Line>.self,
 			storage: GroupedObjectStorage.self)
 	}
+	public static var noLight: RenderGroup {
+		RenderGroup(
+			id: ID.noLight, order: 2, renderer: NoLightRenderer<RenderMode.Triangle>.self,
+			storage: GroupedObjectStorage.self)
+	}
+
 }
