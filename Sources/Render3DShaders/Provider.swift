@@ -44,25 +44,37 @@ extension InstanceUniform: Uniform {}
 
 extension MTLBuffer {
 	@discardableResult
+	public func write(_ data: Data, offset: Int = 0) -> Int {
+		data.withUnsafeBytes { ptr in
+			guard let baseAddress = ptr.baseAddress else { return }
+			self.contents().advanced(by: offset).copyMemory(from: baseAddress, byteCount: data.count)
+		}
+		return data.count
+	}
+
+	@discardableResult
 	public func write<S: Collection, U>(
 		_ objects: S,
 		offset: Int = 0,
 		transform: (S.Element) throws -> U
 	) rethrows -> Int {
-		let stride = MemoryLayout<U>.stride
-		let pointer = self.contents()
-			.advanced(by: offset)
-			.assumingMemoryBound(to: U.self)
-
-		let bufferPointer = UnsafeMutableBufferPointer(
-			start: pointer, count: objects.underestimatedCount)
-
-		var count = 0
-		for (index, object) in objects.enumerated() {
-			bufferPointer[index] = try transform(object)
-			count += 1
-		}
-		return count * stride
+		let mappedUniforms = try objects.map(transform)
+		return self.write(mappedUniforms)
 	}
 
+	@discardableResult
+	public func write<T>(
+		_ objects: [T],
+		offset: Int = 0,
+	) -> Int {
+		let byteCount = objects.count * MemoryLayout<T>.stride
+		objects.withUnsafeBytes { rawBufferPointer in
+			guard let baseAddress = rawBufferPointer.baseAddress else { return }
+			self.contents().advanced(by: offset).copyMemory(
+				from: baseAddress,
+				byteCount: byteCount
+			)
+		}
+		return byteCount
+	}
 }
