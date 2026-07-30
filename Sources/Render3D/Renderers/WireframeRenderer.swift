@@ -1,7 +1,7 @@
 import Metal
 import Render3DShaders
 
-public class OpaqueRenderer: MetalRenderer {
+public class WireframeRenderer: MetalRenderer {
 
 	public let device: any MTLDevice
 	let pipeline: MTLRenderPipelineState
@@ -17,7 +17,7 @@ public class OpaqueRenderer: MetalRenderer {
 		library = try Library(type: .builtin, for: device)
 
 		pipelineDescriptor.vertexFunction = try library.makeFunction(name: "vertexMain")
-		pipelineDescriptor.fragmentFunction = try library.makeFunction(name: "fragmentMain")
+		pipelineDescriptor.fragmentFunction = try library.makeFunction(name: "fragmentWireframeMain")
 		pipelineDescriptor.depthAttachmentPixelFormat = .depth32Float
 		pipelineDescriptor.vertexDescriptor = Vertex.defaultLayout
 
@@ -64,7 +64,7 @@ public class OpaqueRenderer: MetalRenderer {
 			renderEncoder.setFragmentBuffer(instancesBuffer[ctx.frameIndex], offset: i.offset, index: 3)
 
 			renderEncoder.drawIndexedPrimitives(
-				type: .triangle, indexCount: i.mesh.count, indexType: i.mesh.indexType,
+				type: .line, indexCount: i.mesh.count, indexType: i.mesh.indexType,
 				indexBuffer: i.mesh.index,
 				indexBufferOffset: 0, instanceCount: i.count)
 		}
@@ -74,13 +74,13 @@ public class OpaqueRenderer: MetalRenderer {
 }
 
 extension RenderGroup.ID {
-	public static let opaque: RenderGroup.ID = "builtin.opaque"
+	public static let wireframe: RenderGroup.ID = "builtin.wireframe"
 }
 
 extension RenderGroup {
-	public static var opaque: RenderGroup {
+	public static var wireframe: RenderGroup {
 		RenderGroup(
-			id: ID.opaque, order: 0, renderer: OpaqueRenderer.self,
+			id: ID.wireframe, order: 0, renderer: WireframeRenderer.self,
 			storage: GroupedObjectStorage.self)
 	}
 }

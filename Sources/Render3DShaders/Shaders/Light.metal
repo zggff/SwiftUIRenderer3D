@@ -23,7 +23,7 @@ vertex VertexOutput vertexMain(Vertex v [[stage_in]],
     return data;
 };
 
-fragment half4 fragmentMain(VertexOutput frag [[stage_in]], 
+fragment half4 fragmentLightMain(VertexOutput frag [[stage_in]], 
                             bool frontFacing [[front_facing]],
                             constant CameraUniform &camera [[buffer(1)]],
                             constant SceneUniform &scene [[buffer(2)]],
