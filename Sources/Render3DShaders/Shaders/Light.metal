@@ -18,7 +18,10 @@ vertex VertexOutput vertexMain(Vertex v [[stage_in]],
     data.worldPosition = worldPosition.xyz;
     data.instanceID = instanceID;
 
-    data.normal = normalize(instance.normal * v.normal);
+    data.normal = instance.normal * v.normal;
+    if (length_squared(data.normal) > 0.0) {
+        data.normal = normalize(data.normal);
+    }
 
     return data;
 };
@@ -29,10 +32,14 @@ fragment half4 fragmentLightMain(VertexOutput frag [[stage_in]],
                             constant SceneUniform &scene [[buffer(2)]],
                             constant InstanceUniform *models [[buffer(3)]]) {
     if (!frontFacing) {
-        frag.normal =- frag.normal;
+        frag.normal = -frag.normal;
     }
 
     InstanceUniform instance = models[frag.instanceID];
+
+    if (all(frag.normal == float3(0.0))) {
+        return half4(half3(instance.color.rgb), 1.0);
+    }
 
     float3 lightDir = normalize(scene.lightDirection);
 
