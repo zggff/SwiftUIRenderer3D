@@ -10,10 +10,11 @@ public class TransparentRenderer: MetalRenderer {
 	private let compositionPipelineState: MTLRenderPipelineState
 	private let depthStateTransparent: MTLDepthStencilState
 
-	var instancesBuffer: MTLBuffer? = nil
+	var instancesBuffer: RingBuffer
 
-	public required init(device: MTLDevice) throws {
+	public required init(device: MTLDevice, frameCount: Int) throws {
 		self.device = device
+        self.instancesBuffer = RingBuffer(frameCount: frameCount)
 
 		let library = try Library(type: .builtin, for: device)
 
@@ -91,7 +92,7 @@ public class TransparentRenderer: MetalRenderer {
 		else { return }
 
 		let instructions = try group.storage.renderInfo(
-			device: device, cache: ctx.cache, buffer: &instancesBuffer, as: Uniforms.Instance.self,
+			device: device, cache: ctx.cache, buffer: &instancesBuffer[ctx.frameIndex], as: Uniforms.Instance.self,
 			transform: Uniforms.Instance.from
 		)
 
@@ -122,8 +123,8 @@ public class TransparentRenderer: MetalRenderer {
 		for i in instructions {
 			encoder.setCullMode(i.mesh.cullMode)
 			encoder.setVertexBuffer(i.mesh.vertex, offset: 0, index: 0)
-			encoder.setVertexBuffer(instancesBuffer, offset: i.offset, index: 3)
-			encoder.setFragmentBuffer(instancesBuffer, offset: i.offset, index: 3)
+			encoder.setVertexBuffer(instancesBuffer[ctx.frameIndex], offset: i.offset, index: 3)
+			encoder.setFragmentBuffer(instancesBuffer[ctx.frameIndex], offset: i.offset, index: 3)
 
 			encoder.drawIndexedPrimitives(
 				type: .triangle, indexCount: i.mesh.count, indexType: i.mesh.indexType,

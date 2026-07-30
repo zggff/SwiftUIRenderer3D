@@ -1,7 +1,7 @@
 import Metal
 
 public protocol MetalRenderer: AnyObject {
-	init(device: any MTLDevice) throws
+	init(device: any MTLDevice, frameCount: Int) throws
 	func update(drawableSize size: CGSize)
 	func draw(context: RenderContext, group: RenderGroup) throws
 }
@@ -15,6 +15,7 @@ public struct RenderContext {
 
 	public let cache: MeshCache
 	public let buffers: [ObjectIdentifier: MTLBuffer]
+	public let frameIndex: Int
 
 	public func bindFragmentBuffer<T: Uniform>(
 		of type: T.Type, to encoder: MTLRenderCommandEncoder, index: Int,
@@ -30,12 +31,21 @@ public struct RenderContext {
 	public func bindBuffer<T: Uniform>(
 		of type: T.Type, to encoder: MTLRenderCommandEncoder, index: Int,
 	) {
-        bindFragmentBuffer(of: type, to: encoder, index: index)
-        bindVertexBuffer(of: type, to: encoder, index: index)
+		bindFragmentBuffer(of: type, to: encoder, index: index)
+		bindVertexBuffer(of: type, to: encoder, index: index)
 	}
-
 }
 
+public struct RingBuffer {
+	var buffers: [MTLBuffer?]
+	public init(frameCount: Int) {
+		buffers = Array(repeating: nil, count: frameCount)
+	}
+	public subscript(_ index: Int) -> MTLBuffer? {
+		get { buffers[index] }
+		set { buffers[index] = newValue }
+	}
+}
 
 public class Renderer {
 	let device: any MTLDevice
@@ -45,17 +55,27 @@ public class Renderer {
 	var renderers: [RenderGroup.ID: (any MetalRenderer)] = [:]
 	var size: CGSize = CGSize(width: 1, height: 1)
 
-	var buffers: [ObjectIdentifier: MTLBuffer] = [:]
+	var ringBuffers: [[ObjectIdentifier: MTLBuffer]]
+	let frameCount: Int
+	let semaphore: DispatchSemaphore
+	var frameIndex: Int = 0
 
-	public required init(device: any MTLDevice) {
+	public init(device: any MTLDevice, frameCount: Int = 3) {
 		self.device = device
 		self.meshCache = MeshCache(device: device)
+
+		self.frameCount = frameCount
+		self.ringBuffers = Array(repeating: [:], count: frameCount)
+		self.semaphore = DispatchSemaphore(value: frameCount)
 	}
 
 	public func prepare(for scene: Scene3D) throws {
 		for g in scene.renderGroups {
 			if renderers[g.id] == nil {
-				do { renderers[g.id] = try g.rendererType.init(device: device) } catch {
+				do {
+					renderers[g.id] = try g.rendererType.init(
+						device: device, frameCount: frameCount)
+				} catch {
 					throw RenderError.pipeline(id: g.id.rawValue, error: error)
 				}
 			}
@@ -98,13 +118,19 @@ public class Renderer {
 		renderPassDescriptor: MTLRenderPassDescriptor,
 		commandBuffer: MTLCommandBuffer,
 	) throws {
+		_ = semaphore.wait(timeout: .distantFuture)
+		let sem = semaphore
+
+		commandBuffer.addCompletedHandler({ _ in sem.signal() })
+
 		try prepare(for: scene)
 		update(drawableSize: size)
-
 		guard let depthTexture else { return }
 
-		let aspect = Float(size.width) / Float(size.height)
-		camera.withAspect(aspect).uniform.allocateAndWrite(
+		let camera = camera.withAspect(Float(size.width) / Float(size.height))
+
+		var buffers = ringBuffers[frameIndex]
+		camera.uniform.allocateAndWrite(
 			for: device, buffer: &buffers[ObjectIdentifier(Uniforms.Camera.self)])
 		for (k, v) in scene.uniforms {
 			v.allocateAndWrite(for: device, buffer: &buffers[k])
@@ -118,11 +144,12 @@ public class Renderer {
 		renderPassDescriptor.colorAttachments[0].loadAction = .clear
 
 		let context = RenderContext(
-			scene: scene, camera: camera.withAspect(aspect),
+			scene: scene, camera: camera,
 			renderPassDescriptor: renderPassDescriptor,
 			commandBuffer: commandBuffer, depthTexture: depthTexture,
 			cache: meshCache,
 			buffers: buffers,
+			frameIndex: frameIndex
 		)
 
 		for g in scene.renderGroups.sorted(by: { a, b in a.order < b.order }) {
@@ -131,5 +158,7 @@ public class Renderer {
 			renderPassDescriptor.colorAttachments[0].loadAction = .load
 			renderPassDescriptor.depthAttachment.loadAction = .load
 		}
+
+		frameIndex = (frameIndex + 1) % frameCount
 	}
 }
