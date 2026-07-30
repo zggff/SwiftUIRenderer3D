@@ -1,7 +1,7 @@
 import Foundation
-import Metal
 import Render3DShadersC
 @_exported import simd
+@_exported import Metal
 
 
 public enum Uniforms {
@@ -31,6 +31,6 @@ extension Vertex {
 		return vertexDescriptor
 	}
 	public init(position: SIMD3<Float>) {
-		self.init(position: position, normal: [0, 0, 0])
+		self.init(position: position, normal: SIMD3<Float>(0, 0, 0))
 	}
 }

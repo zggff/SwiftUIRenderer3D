@@ -4,8 +4,12 @@ import Render3DShaders
 import simd
 
 public final class Scene3D {
-	public init(renderGroups: [RenderGroup] = [.opaque, .transparent]) {
+	public init(
+		renderGroups: [RenderGroup] = [.opaque, .transparent],
+		additionalRenderGroups: [RenderGroup] = []
+	) {
 		self.renderGroups = renderGroups
+		self.renderGroups.append(contentsOf: additionalRenderGroups)
 	}
 
 	public private(set) var renderGroups: [RenderGroup]
