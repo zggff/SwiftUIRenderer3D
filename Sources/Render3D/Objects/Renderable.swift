@@ -4,7 +4,7 @@ import Synchronization
 import simd
 
 public protocol Renderable {
-	func mesh(for device: MTLDevice) throws -> Mesh?
+	var mesh:  Mesh { get }
 	var meshId: MeshID { get }
 	var cachable: Bool { get }
 }
@@ -19,6 +19,7 @@ public protocol InstancedRenderable: Renderable {
 	var model: Matrix { get }
 	var vertexColorType: Uniforms.VertexColorType { get }
 	var color: Vec4 { get }
+	var transparent: Bool { get }
 }
 
 extension Uniforms.Instance {
@@ -34,7 +35,7 @@ extension Uniforms.Instance {
 }
 
 extension InstancedRenderable {
-	public var opaque: Bool { color.w == 1 }
+	public var opaque: Bool { !transparent }
 	public var transparent: Bool { color.w < 1 }
 	public var vertexColorType: Uniforms.VertexColorType { .ignore }
 

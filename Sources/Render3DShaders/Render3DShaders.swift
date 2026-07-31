@@ -31,7 +31,7 @@ extension Vertex {
 		vertexDescriptor.attributes[1].bufferIndex = 0
 		vertexDescriptor.attributes[1].offset = MemoryLayout<SIMD3<Float>>.stride
 
-		vertexDescriptor.attributes[2].format = .float3
+		vertexDescriptor.attributes[2].format = .float4
 		vertexDescriptor.attributes[2].bufferIndex = 0
 		vertexDescriptor.attributes[2].offset = MemoryLayout<SIMD3<Float>>.stride * 2
 
@@ -40,7 +40,7 @@ extension Vertex {
 	}
 	public init(
 		position: SIMD3<Float>, normal: SIMD3<Float> = SIMD3<Float>(0, 0, 0),
-		color: SIMD3<Float> = SIMD3<Float>(0, 0, 0)
+		color: SIMD4<Float> = SIMD4<Float>(0, 0, 0, 1.0)
 	) {
 		self.init()
 		self.position = position

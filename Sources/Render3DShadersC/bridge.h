@@ -14,7 +14,7 @@
 struct Vertex {
   vector_float3 position VERTEX_ATTR(0);
   vector_float3 normal VERTEX_ATTR(1);
-  vector_float3 colorUV VERTEX_ATTR(2);
+  vector_float4 colorUV VERTEX_ATTR(2);
 };
 
 struct CameraUniform {

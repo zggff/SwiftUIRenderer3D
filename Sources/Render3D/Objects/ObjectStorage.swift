@@ -1,13 +1,13 @@
 import Metal
 
 public struct DrawInstruction {
-	public init(mesh: Mesh, offset: Int, count: Int) {
+	public init(mesh: GPUMesh, offset: Int, count: Int) {
 		self.mesh = mesh
 		self.offset = offset
 		self.count = count
 	}
 
-	public let mesh: Mesh
+	public let mesh: GPUMesh 
 	public let offset: Int
 	public let count: Int
 }

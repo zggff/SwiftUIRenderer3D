@@ -14,7 +14,7 @@ fragment OITFragmentOutput oitAccumulationFragment(VertexOutput frag [[stage_in]
                                                    constant SceneUniform &scene [[buffer(2)]],
                                                    constant InstanceUniform *models [[buffer(3)]]) {
     InstanceUniform instance = models[frag.instanceID];
-    float alpha = instance.color.a;
+    float alpha = frag.color.a;
     
     if (alpha >= 1.0) discard_fragment();
 
@@ -29,7 +29,7 @@ fragment OITFragmentOutput oitAccumulationFragment(VertexOutput frag [[stage_in]
     float specular = pow(max(dot(frag.normal, halfway), 0.0), instance.shininess);
     float3 specularLight = specular * 0.5 * scene.lightColor;
 
-    float3 finalColor = instance.color.rgb * lighting + specularLight;
+    float3 finalColor = frag.color.rgb * lighting + specularLight;
 
     float z = frag.position.z;
     float depth = z * 0.5 + 0.5;

@@ -11,18 +11,18 @@ public struct MeshID: Hashable, ExpressibleByStringLiteral, RawRepresentable, Se
 }
 
 public class MeshCache {
-	var meshCache: [MeshID: Mesh?] = [:]
+	var meshCache: [MeshID: GPUMesh?] = [:]
 	public private(set) var device: any MTLDevice
 
 	init(device: MTLDevice) {
 		self.device = device
 	}
 
-	public func mesh(for obj: any Renderable) throws -> Mesh? {
+	public func mesh<R: Renderable>(for obj: R) throws -> GPUMesh? {
 		let id = obj.meshId
 		if let mesh = meshCache[id] { return mesh }
 
-		let mesh = try obj.mesh(for: device)
+		let mesh = try GPUMesh(device, mesh: obj.mesh)
 		if obj.cachable, let mesh {
 			meshCache[id] = mesh
 		}

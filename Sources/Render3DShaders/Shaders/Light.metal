@@ -22,7 +22,7 @@ vertex VertexOutput vertexMain(Vertex v [[stage_in]],
     if (instance.vertexColorType == 0) {
         data.color = instance.color;
     } else {
-        data.color = float4(v.colorUV, 1.0);
+        data.color = v.colorUV;
     }
     if (length_squared(data.normal) > 0.0) {
         data.normal = normalize(data.normal);
@@ -36,6 +36,11 @@ fragment half4 fragmentLightMain(VertexOutput frag [[stage_in]],
                             constant CameraUniform &camera [[buffer(1)]],
                             constant SceneUniform &scene [[buffer(2)]],
                             constant InstanceUniform *models [[buffer(3)]]) {
+
+    if (frag.color.a < 1.0) {
+        discard_fragment();
+    }
+
     if (!frontFacing) {
         frag.normal = -frag.normal;
     }
