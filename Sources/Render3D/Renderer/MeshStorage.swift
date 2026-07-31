@@ -18,7 +18,7 @@ public class MeshCache {
 		self.device = device
 	}
 
-	public func mesh<R: Renderable>(for obj: R) throws -> GPUMesh? {
+	public func mesh<R: MeshProvider>(for obj: R) throws -> GPUMesh? {
 		let id = obj.meshId
 		if let mesh = meshCache[id] { return mesh }
 

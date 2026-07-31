@@ -1,6 +1,7 @@
 import Metal
 
-public protocol MetalRenderer: AnyObject {
+public protocol MetalRenderer<UniformType>: AnyObject {
+    associatedtype UniformType: Uniform
 	init(device: any MTLDevice, frameCount: Int) throws
 	func update(drawableSize size: CGSize)
 	func draw(context: RenderContext, group: RenderGroup) throws

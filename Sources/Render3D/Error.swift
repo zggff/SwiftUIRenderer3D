@@ -9,22 +9,33 @@ public enum RenderError: LocalizedError {
 	)
 	case allocation(size: Int, type: Any.Type)
 	case mesh
+	case scene(SceneError)
 
 	public var errorDescription: String? {
 		switch self {
 			case .library(let e):
-				return
-					"Failed when loading library: \(e.localizedDescription)"
+				"Failed when loading library: \(e.localizedDescription)"
 			case .pipeline(let id, let error):
-				return
-					"RenderPipeline [\(id)] failed with \(error.localizedDescription)"
+				"RenderPipeline [\(id)] failed with \(error.localizedDescription)"
 			case .uniform(let expected, let from):
-				return "Failed to create uniform '\(expected)' from '\(from)'."
+				"Failed to create uniform '\(expected)' from '\(from)'."
 			case .allocation(let size, let type):
-				return "Failed to allocate '\(size)' bytes for '\(type)'."
+				"Failed to allocate '\(size)' bytes for '\(type)'."
 			case .mesh:
-				return "Mesh must not be empty"
+				"Mesh must not be empty"
+			case .scene(let e):
+				"Failed when constructing a scene: \(e.localizedDescription)"
+		}
+	}
 
+	public enum SceneError: LocalizedError {
+		case noRenderGroup(RenderGroup.ID)
+		case invalidStorage
+		public var errorDescription: String? {
+			switch self {
+				case .noRenderGroup(let id): "no render group with id: \(id)"
+				case .invalidStorage: "invalid type for storage group"
+			}
 		}
 	}
 
@@ -34,11 +45,9 @@ public enum RenderError: LocalizedError {
 		public var errorDescription: String? {
 			switch self {
 				case .NoLibrary:
-					return
-						"Failed to load the default Metal library. Make sure your .metal shader files are included in the target's build phases."
+					"Failed to load the default Metal library. Make sure your .metal shader files are included in the target's build phases."
 				case .NoFunction(let name):
-					return
-						"Could not find a compiled Metal function named '\(name)' in the current library."
+					"Could not find a compiled Metal function named '\(name)' in the current library."
 			}
 		}
 	}

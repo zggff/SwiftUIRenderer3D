@@ -1,7 +1,7 @@
 import Metal
 import Render3DShaders
 
-public class OpaqueRenderer: MetalRenderer {
+public class OpaqueRenderer: MetalRenderer<Uniforms.Instance> {
 
 	public let device: any MTLDevice
 	let pipeline: MTLRenderPipelineState
@@ -11,7 +11,7 @@ public class OpaqueRenderer: MetalRenderer {
 
 	public required init(device: any MTLDevice, frameCount: Int) throws {
 		self.device = device
-        self.instancesBuffer = RingBuffer(frameCount: frameCount)
+		self.instancesBuffer = RingBuffer(frameCount: frameCount)
 
 		let pipelineDescriptor = MTLRenderPipelineDescriptor()
 		library = try Library(type: .builtin, for: device)
@@ -42,9 +42,7 @@ public class OpaqueRenderer: MetalRenderer {
 
 	public func draw(context ctx: RenderContext, group: RenderGroup) throws {
 		let instructions = try group.storage.renderInfo(
-			device: device, cache: ctx.cache, buffer: &instancesBuffer[ctx.frameIndex], as: Uniforms.Instance.self,
-			transform: Uniforms.Instance.from
-		)
+			device: device, cache: ctx.cache, buffer: &instancesBuffer[ctx.frameIndex])
 
 		guard
 			let renderEncoder = ctx.commandBuffer.makeRenderCommandEncoder(
@@ -60,8 +58,10 @@ public class OpaqueRenderer: MetalRenderer {
 		for i in instructions {
 			renderEncoder.setCullMode(i.mesh.cullMode)
 			renderEncoder.setVertexBuffer(i.mesh.vertex, offset: 0, index: 0)
-			renderEncoder.setVertexBuffer(instancesBuffer[ctx.frameIndex], offset: i.offset, index: 3)
-			renderEncoder.setFragmentBuffer(instancesBuffer[ctx.frameIndex], offset: i.offset, index: 3)
+			renderEncoder.setVertexBuffer(
+				instancesBuffer[ctx.frameIndex], offset: i.offset, index: 3)
+			renderEncoder.setFragmentBuffer(
+				instancesBuffer[ctx.frameIndex], offset: i.offset, index: 3)
 
 			renderEncoder.drawIndexedPrimitives(
 				type: .triangle, indexCount: i.mesh.count, indexType: i.mesh.indexType,
@@ -80,7 +80,7 @@ extension RenderGroup.ID {
 extension RenderGroup {
 	public static var opaque: RenderGroup {
 		RenderGroup(
-			id: ID.opaque, order: 0, renderer: OpaqueRenderer.self,
-			storage: GroupedObjectStorage.self)
+			id: .opaque, order: 0, renderer: OpaqueRenderer.self,
+			storage: GroupedObjectStorage<Uniforms.Instance>.self)
 	}
 }

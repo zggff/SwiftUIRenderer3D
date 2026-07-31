@@ -16,6 +16,7 @@ public enum RenderMode {
 }
 
 public class NoLightRenderer<T: RenderMode.Primitive>: MetalRenderer {
+	public typealias UniformType = Uniforms.Instance
 
 	public let device: any MTLDevice
 	let pipeline: MTLRenderPipelineState
@@ -58,8 +59,6 @@ public class NoLightRenderer<T: RenderMode.Primitive>: MetalRenderer {
 	public func draw(context ctx: RenderContext, group: RenderGroup) throws {
 		let instructions = try group.storage.renderInfo(
 			device: device, cache: ctx.cache, buffer: &instancesBuffer[ctx.frameIndex],
-			as: Uniforms.Instance.self,
-			transform: Uniforms.Instance.from
 		)
 
 		guard

@@ -53,34 +53,39 @@ public final class Scene3D {
 		}
 	}
 
-	public func draw(_ content: (Context) -> Void) {
+	public func draw(_ content: (Context) throws -> Void) rethrows {
 		removeAll()
 		let context = Context(scene: self)
-		content(context)
+		try content(context)
 		finishDeclaration()
-	}
-
-	public func storage(for id: RenderGroup.ID) -> ObjectStorage? {
-		return self.renderGroups.first(where: { n in n.id == id })?.storage
 	}
 
 	public struct Context {
 		fileprivate var scene: Scene3D
 
-		public func draw(_ objects: [any Renderable], in id: RenderGroup.ID) {
-			scene.storage(for: id)?.append(objects)
+		public func draw(_ objects: [any UniformProvider & MeshProvider], in id: RenderGroup.ID)
+			throws
+		{
+			guard let group = scene.renderGroups.first(where: { g in g.id == id }) else {
+				throw RenderError.scene(.noRenderGroup(id))
+			}
+			try group.storage.append(typeErased: objects)
 		}
 	}
 }
 
 protocol RenderableCollection {
-	var renderables: [any Renderable] { get }
+	var renderables: [any MeshProvider] { get }
 }
 
-extension Array: RenderableCollection where Element == any Renderable {
-	var renderables: [any Renderable] { self }
+extension Array: RenderableCollection where Element == any MeshProvider {
+	var renderables: [any MeshProvider] { self }
 }
 
-extension Renderable {
-	var renderables: [any Renderable] { [self] }
+extension MeshProvider {
+	var renderables: [any MeshProvider] { [self] }
+}
+
+func cast<T>(_ value: Any, to type: T.Type) -> T? {
+	return value as? T
 }

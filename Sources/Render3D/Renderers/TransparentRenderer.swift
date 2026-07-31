@@ -2,6 +2,8 @@ import Metal
 import Render3DShaders
 
 public class TransparentRenderer: MetalRenderer {
+	public typealias UniformType = Uniforms.Instance
+
 	private let device: MTLDevice
 	private var accumTexture: MTLTexture?
 	private var revealTexture: MTLTexture?
@@ -14,7 +16,7 @@ public class TransparentRenderer: MetalRenderer {
 
 	public required init(device: MTLDevice, frameCount: Int) throws {
 		self.device = device
-        self.instancesBuffer = RingBuffer(frameCount: frameCount)
+		self.instancesBuffer = RingBuffer(frameCount: frameCount)
 
 		let library = try Library(type: .builtin, for: device)
 
@@ -92,8 +94,7 @@ public class TransparentRenderer: MetalRenderer {
 		else { return }
 
 		let instructions = try group.storage.renderInfo(
-			device: device, cache: ctx.cache, buffer: &instancesBuffer[ctx.frameIndex], as: Uniforms.Instance.self,
-			transform: Uniforms.Instance.from
+			device: device, cache: ctx.cache, buffer: &instancesBuffer[ctx.frameIndex],
 		)
 
 		let pass = MTLRenderPassDescriptor()

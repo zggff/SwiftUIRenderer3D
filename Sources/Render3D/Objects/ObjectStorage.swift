@@ -7,20 +7,23 @@ public struct DrawInstruction {
 		self.count = count
 	}
 
-	public let mesh: GPUMesh 
+	public let mesh: GPUMesh
 	public let offset: Int
 	public let count: Int
 }
 
-public protocol ObjectStorage: AnyObject {
+public protocol ObjectStorage<UniformType>: AnyObject {
+	associatedtype UniformType
+	associatedtype Element = any UniformProvider<UniformType> & MeshProvider
+
 	init()
 	var count: Int { get }
-	func append(_ objects: [any Renderable])
+	func append(objects: [Element])
+	func append(typeErased: [any UniformProvider & MeshProvider]) throws
 
 	func removeAll()
-	func renderInfo<U: Uniform>(
-		device: MTLDevice, cache: MeshCache, buffer: inout MTLBuffer?, as targetType: U.Type,
-		transform: (any Renderable) throws -> U
+	func renderInfo(
+		device: MTLDevice, cache: MeshCache, buffer: inout MTLBuffer?
 	) throws -> [DrawInstruction]
 }
 
@@ -59,69 +62,5 @@ extension ObjectStorage {
 			guard let baseAddress = ptr.baseAddress else { return }
 			buffer.contents().copyMemory(from: baseAddress, byteCount: data.count)
 		})
-	}
-}
-
-public class GroupedObjectStorage: ObjectStorage {
-	typealias Element = any Renderable
-	var storage: [MeshID: [Element]] = [:]
-	var instructions: [DrawInstruction] = []
-	var uniformsByType: [ObjectIdentifier: Data] = [:]
-
-	public var count: Int {
-		storage.values.map(\.count).reduce(0, +)
-	}
-
-	public required init() {}
-
-	public func append(_ objects: [any Renderable]) {
-		guard !objects.isEmpty else { return }
-		for obj in objects {
-			storage[obj.meshId, default: []].append(obj)
-		}
-		instructions.removeAll(keepingCapacity: true)
-		uniformsByType.removeAll(keepingCapacity: true)
-	}
-
-	public func removeAll() {
-		storage = [:]
-		instructions.removeAll(keepingCapacity: true)
-		uniformsByType.removeAll(keepingCapacity: true)
-	}
-
-	public func renderInfo<U: Uniform>(
-		device: MTLDevice, cache: MeshCache, buffer: inout MTLBuffer?, as targetType: U.Type,
-		transform: (any Renderable) throws -> U
-	) throws -> [DrawInstruction] {
-		guard count > 0 else {
-			return []
-		}
-		let key = ObjectIdentifier(targetType)
-
-		if let uniformData = uniformsByType[key], !instructions.isEmpty {
-			try writeDataToBuffer(
-				device: device, buffer: &buffer, data: uniformData, targetType: targetType)
-			return instructions
-		}
-
-		var uniforms: [U] = []
-		uniforms.reserveCapacity(count)
-		instructions.removeAll(keepingCapacity: true)
-
-		var offset = 0
-		for objects in storage.values {
-			guard let first = objects.first,
-				let mesh = try cache.mesh(for: first)
-			else { continue }
-			uniforms.append(contentsOf: try objects.map(transform))
-			instructions.append(DrawInstruction(mesh: mesh, offset: offset, count: objects.count))
-			offset += MemoryLayout<U>.stride * objects.count
-		}
-
-		let data = uniforms.withUnsafeBytes { Data($0) }
-		uniformsByType[key] = data
-		try writeDataToBuffer(device: device, buffer: &buffer, data: data, targetType: targetType)
-
-		return instructions
 	}
 }

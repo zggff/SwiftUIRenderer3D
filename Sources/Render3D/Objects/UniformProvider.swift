@@ -3,42 +3,31 @@ import Render3DShaders
 import Synchronization
 import simd
 
-public protocol Renderable {
-	var mesh:  Mesh { get }
+public protocol UniformProvider<UniformType> {
+	associatedtype UniformType
+	func uniform() -> UniformType
+}
+
+public protocol MeshProvider {
+	var mesh: Mesh { get }
 	var meshId: MeshID { get }
 	var cachable: Bool { get }
 }
 
-extension Renderable {
+extension MeshProvider {
 	public var cachable: Bool {
 		true
 	}
 }
 
-public protocol InstancedRenderable: Renderable {
+public protocol InstancedRenderable: UniformProvider<Uniforms.Instance> & MeshProvider {
 	var model: Matrix { get }
 	var vertexColorType: Uniforms.VertexColorType { get }
 	var color: Vec4 { get }
-	var transparent: Bool { get }
-}
-
-extension Uniforms.Instance {
-	public static func from(_ item: any Renderable) throws -> Self {
-		guard let item = item as? any InstancedRenderable else {
-			throw RenderError.uniform(
-				expected: (any InstancedRenderable).self,
-				from: type(of: item)
-			)
-		}
-		return item.uniform()
-	}
 }
 
 extension InstancedRenderable {
-	public var opaque: Bool { !transparent }
-	public var transparent: Bool { color.w < 1 }
 	public var vertexColorType: Uniforms.VertexColorType { .ignore }
-
 	public func uniform() -> Uniforms.Instance {
 		var uniform = Uniforms.Instance()
 		uniform.model = model
@@ -53,5 +42,4 @@ extension InstancedRenderable {
 		uniform.shininess = 10
 		return uniform
 	}
-
 }
