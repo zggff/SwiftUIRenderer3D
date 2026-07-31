@@ -19,6 +19,11 @@ vertex VertexOutput vertexMain(Vertex v [[stage_in]],
     data.instanceID = instanceID;
 
     data.normal = instance.normal * v.normal;
+    if (instance.vertexColorType == 0) {
+        data.color = instance.color;
+    } else {
+        data.color = float4(v.colorUV, 1.0);
+    }
     if (length_squared(data.normal) > 0.0) {
         data.normal = normalize(data.normal);
     }
@@ -38,7 +43,7 @@ fragment half4 fragmentLightMain(VertexOutput frag [[stage_in]],
     InstanceUniform instance = models[frag.instanceID];
 
     if (all(frag.normal == float3(0.0))) {
-        return half4(half3(instance.color.rgb), 1.0);
+        return half4(half3(frag.color.rgb), 1.0);
     }
 
     float3 lightDir = normalize(scene.lightDirection);
@@ -73,10 +78,10 @@ fragment half4 fragmentLightMain(VertexOutput frag [[stage_in]],
         scene.lightColor;
 
     float3 finalColor =
-        instance.color.rgb * lighting + specularLight;
+        frag.color.rgb * lighting + specularLight;
 
     return half4(
         half3(finalColor),
-        half(instance.color.a)
+        half(frag.color.a)
     );
 };

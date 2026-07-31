@@ -14,6 +14,7 @@
 struct Vertex {
   vector_float3 position VERTEX_ATTR(0);
   vector_float3 normal VERTEX_ATTR(1);
+  vector_float3 colorUV VERTEX_ATTR(2);
 };
 
 struct CameraUniform {
@@ -35,6 +36,8 @@ struct InstanceUniform {
   matrix_float3x3 normal;
   vector_float4 color;
   float shininess;
+
+  int vertexColorType; // 0 - ignored, 1 - vertexColor, 2 - textureColor
 };
 
 #endif

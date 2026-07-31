@@ -17,6 +17,7 @@ extension Renderable {
 
 public protocol InstancedRenderable: Renderable {
 	var model: Matrix { get }
+	var vertexColorType: Uniforms.VertexColorType { get }
 	var color: Vec4 { get }
 }
 
@@ -35,11 +36,13 @@ extension Uniforms.Instance {
 extension InstancedRenderable {
 	public var opaque: Bool { color.w == 1 }
 	public var transparent: Bool { color.w < 1 }
+	public var vertexColorType: Uniforms.VertexColorType { .ignore }
 
 	public func uniform() -> Uniforms.Instance {
 		var uniform = Uniforms.Instance()
 		uniform.model = model
 		uniform.color = color
+		uniform.vertexColorType = vertexColorType.rawValue
 		uniform.normal = float3x3(
 			columns: (
 				Vec3(model.columns.0.x, model.columns.0.y, model.columns.0.z),
