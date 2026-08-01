@@ -47,6 +47,7 @@ public class TransparentRenderer: MetalRenderer {
 		let compDesc = MTLRenderPipelineDescriptor()
 		compDesc.vertexFunction = try library.makeFunction(name: "oitCompositeVertex")
 		compDesc.fragmentFunction = try library.makeFunction(name: "oitCompositeFragment")
+        compDesc.depthAttachmentPixelFormat = .depth32Float
 		compDesc.colorAttachments[0].pixelFormat = .bgra8Unorm
 		compDesc.colorAttachments[0].isBlendingEnabled = true
 		compDesc.colorAttachments[0].sourceRGBBlendFactor = .sourceAlpha
