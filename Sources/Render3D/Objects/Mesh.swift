@@ -1,7 +1,7 @@
 import Metal
 @_exported import Render3DShaders
 
-public protocol MetalIndex {
+public protocol MetalIndex: UnsignedInteger {
 	static var metalIndexType: MTLIndexType { get }
 }
 
@@ -56,10 +56,10 @@ public struct GPUMesh {
 		switch mesh.indices {
 			case .uint16(let indices):
 				try self.init(
-					device, vertices: mesh.vertices, indices: indices)
+					device, vertices: mesh.vertices, indices: indices, cullMode: mesh.cullMode)
 			case .uint32(let indices):
 				try self.init(
-					device, vertices: mesh.vertices, indices: indices)
+					device, vertices: mesh.vertices, indices: indices, cullMode: mesh.cullMode)
 		}
 	}
 
