@@ -9,14 +9,7 @@ public class GroupedObjectStorage<UniformType: Uniform>: ObjectStorage {
 
 	public required init() {}
 
-	public func append(typeErased objects: [any UniformProvider & MeshProvider]) throws {
-		guard let objects = objects as? [Element] else {
-			throw RenderError.scene(.invalidStorage)
-		}
-		append(objects: objects)
-	}
-
-	public func append(objects: [Element]) {
+	public func append<T: UniformMeshProvider<UniformType>>(objects: [T]) throws {
 		guard !objects.isEmpty else { return }
 		for obj in objects {
 			storage[obj.meshId, default: []].append(obj)

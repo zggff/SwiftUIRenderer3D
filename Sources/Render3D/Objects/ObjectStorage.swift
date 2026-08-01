@@ -12,14 +12,15 @@ public struct DrawInstruction {
 	public let count: Int
 }
 
+public typealias UniformMeshProvider<T> = UniformProvider<T> & MeshProvider
+
 public protocol ObjectStorage<UniformType>: AnyObject {
 	associatedtype UniformType
-	associatedtype Element = any UniformProvider<UniformType> & MeshProvider
+	associatedtype Element = any UniformMeshProvider<UniformType>
 
 	init()
 	var count: Int { get }
-	func append(objects: [Element])
-	func append(typeErased: [any UniformProvider & MeshProvider]) throws
+	func append<T: UniformMeshProvider<UniformType>>(objects: [T]) throws
 
 	func removeAll()
 	func renderInfo(

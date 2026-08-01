@@ -67,32 +67,30 @@ public final class Scene3D {
 
 	public struct Context {
 		fileprivate var scene: Scene3D
-		public typealias Renderable = any UniformProvider & MeshProvider
+		public typealias Renderable = UniformProvider & MeshProvider
 
 		/// initialise a drawBuilder with objects
-		public func draw(_ objects: [Renderable]) -> DrawBuilder {
+		public func draw<T: Renderable>(_ objects: [T]) -> DrawBuilder<T> {
 			DrawBuilder(context: self, objects: objects)
 		}
 
-		/// initialise a drawBuilder with objects
-		public func draw(_ objects: Renderable...) -> DrawBuilder {
-			DrawBuilder(context: self, objects: objects)
-		}
-
-		public struct DrawBuilder {
+		public struct DrawBuilder<T: Renderable> {
 			fileprivate let context: Context
-			fileprivate var objects: [Renderable]
+			fileprivate var objects: [T]
 
-            /// submit Renderable objects to object storage
+			/// submit Renderable objects to object storage
 			public func `in`(_ id: RenderGroup.ID) throws {
 				guard let group = context.scene.renderGroups.first(where: { g in g.id == id })
 				else {
 					throw RenderError.scene(.noRenderGroup(id))
 				}
-				try group.storage.append(typeErased: objects)
+				guard let storage = group.storage as? any ObjectStorage<T.UniformType> else {
+                    throw RenderError.scene(.invalidStorage)
+				}
+				try storage.append(objects: objects)
 			}
 
-            /// submit Renderable objects to object storage
+			/// submit Renderable objects to object storage
 			public func `in`(_ ids: RenderGroup.ID...) throws {
 				for id in ids {
 					try self.in(id)
