@@ -53,10 +53,20 @@ public final class Scene3D {
 		}
 	}
 
-	public func draw(_ content: (Context) throws -> Void) rethrows {
+	public var drawCallback: ((Context) throws -> Void)? = nil
+
+    /// draws the scene. This allows the renderer to also report errors with drawing
+	public func executeDraw() throws {
+		guard let drawCallback else { return }
+
 		removeAll()
 		let context = Context(scene: self)
-		try content(context)
+		try drawCallback(context)
+	}
+
+    /// prepares the scene for drawing but does not actually execute the passed closure
+	public func draw(_ content: @escaping (Context) throws -> Void) {
+		drawCallback = content
 		finishDeclaration()
 	}
 

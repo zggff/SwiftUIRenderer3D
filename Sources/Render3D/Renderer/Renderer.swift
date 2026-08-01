@@ -121,9 +121,9 @@ public class Renderer {
 	) throws {
 		_ = semaphore.wait(timeout: .distantFuture)
 		let sem = semaphore
-
 		commandBuffer.addCompletedHandler({ _ in sem.signal() })
 
+        try scene.executeDraw()
 		try prepare(for: scene)
 		update(drawableSize: size)
 		guard let depthTexture else { return }
