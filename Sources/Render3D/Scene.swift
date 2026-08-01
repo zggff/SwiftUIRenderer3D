@@ -1,8 +1,3 @@
-import Metal
-import Observation
-import Render3DShaders
-import simd
-
 public final class Scene3D {
 	public init(
 		renderGroups: [RenderGroup] = [.opaque, .transparent],
@@ -55,7 +50,7 @@ public final class Scene3D {
 
 	public var drawCallback: ((Context) throws -> Void)? = nil
 
-    /// draws the scene. This allows the renderer to also report errors with drawing
+	/// draws the scene. This allows the renderer to also report errors with drawing
 	public func executeDraw() throws {
 		guard let drawCallback else { return }
 
@@ -64,7 +59,7 @@ public final class Scene3D {
 		try drawCallback(context)
 	}
 
-    /// prepares the scene for drawing but does not actually execute the passed closure
+	/// prepares the scene for drawing but does not actually execute the passed closure
 	public func draw(_ content: @escaping (Context) throws -> Void) {
 		drawCallback = content
 		finishDeclaration()
@@ -72,14 +67,37 @@ public final class Scene3D {
 
 	public struct Context {
 		fileprivate var scene: Scene3D
+		public typealias Renderable = any UniformProvider & MeshProvider
 
-		public func draw(_ objects: [any UniformProvider & MeshProvider], in id: RenderGroup.ID)
-			throws
-		{
-			guard let group = scene.renderGroups.first(where: { g in g.id == id }) else {
-				throw RenderError.scene(.noRenderGroup(id))
+		/// initialise a drawBuilder with objects
+		public func draw(_ objects: [Renderable]) -> DrawBuilder {
+			DrawBuilder(context: self, objects: objects)
+		}
+
+		/// initialise a drawBuilder with objects
+		public func draw(_ objects: Renderable...) -> DrawBuilder {
+			DrawBuilder(context: self, objects: objects)
+		}
+
+		public struct DrawBuilder {
+			fileprivate let context: Context
+			fileprivate var objects: [Renderable]
+
+            /// submit Renderable objects to object storage
+			public func `in`(_ id: RenderGroup.ID) throws {
+				guard let group = context.scene.renderGroups.first(where: { g in g.id == id })
+				else {
+					throw RenderError.scene(.noRenderGroup(id))
+				}
+				try group.storage.append(typeErased: objects)
 			}
-			try group.storage.append(typeErased: objects)
+
+            /// submit Renderable objects to object storage
+			public func `in`(_ ids: RenderGroup.ID...) throws {
+				for id in ids {
+					try self.in(id)
+				}
+			}
 		}
 	}
 }
