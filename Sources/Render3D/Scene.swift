@@ -57,6 +57,7 @@ public final class Scene3D {
 		removeAll()
 		let context = Context(scene: self)
 		try drawCallback(context)
+        self.drawCallback = nil
 	}
 
 	/// prepares the scene for drawing but does not actually execute the passed closure
