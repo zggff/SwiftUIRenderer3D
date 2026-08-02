@@ -37,7 +37,7 @@ public struct Camera {
 	public var uniform: Uniforms.Camera {
 		let projection = Matrix.projection(
 			projectionFov: Float(70).degrees,
-			near: 1,
+			near: 0.01,
 			far: 1000,
 			aspect: aspect)
 		return Uniforms.Camera(
