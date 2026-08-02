@@ -22,7 +22,7 @@ public class MeshCache {
 		let id = obj.meshId
 		if let mesh = meshCache[id] { return mesh }
 
-		let mesh = try GPUMesh(device, mesh: obj.mesh)
+		let mesh = try GPUMesh(device, mesh: obj.getMesh())
 		if obj.cachable, let mesh {
 			meshCache[id] = mesh
 		}

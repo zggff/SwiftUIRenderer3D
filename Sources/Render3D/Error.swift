@@ -8,7 +8,7 @@ public enum RenderError: LocalizedError {
 		expected: Any.Type, from: Any.Type
 	)
 	case allocation(size: Int, type: Any.Type)
-	case mesh
+	case mesh(String)
 	case scene(SceneError)
 
 	public var errorDescription: String? {
@@ -21,8 +21,8 @@ public enum RenderError: LocalizedError {
 				"Failed to create uniform '\(expected)' from '\(from)'."
 			case .allocation(let size, let type):
 				"Failed to allocate '\(size)' bytes for '\(type)'."
-			case .mesh:
-				"Mesh must not be empty"
+			case .mesh(let s):
+				"Failed to create a mesh: \(s)"
 			case .scene(let e):
 				"Failed when constructing a scene: \(e.localizedDescription)"
 		}

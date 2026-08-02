@@ -8,8 +8,9 @@ public protocol UniformProvider<UniformType> {
 	func uniform() -> UniformType
 }
 
-public protocol MeshProvider {
-	var mesh: Mesh { get }
+public protocol MeshProvider<MeshType> {
+    associatedtype MeshType: MeshSource
+	func getMesh() throws -> MeshType
 	var meshId: MeshID { get }
 	var cachable: Bool { get }
 }

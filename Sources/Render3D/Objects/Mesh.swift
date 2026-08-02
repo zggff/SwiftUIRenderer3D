@@ -13,19 +13,21 @@ extension UInt32: MetalIndex {
 	public static let metalIndexType: MTLIndexType = .uint32
 }
 
-public struct Mesh {
-	public enum IndexData {
-		case uint16([UInt16])
-		case uint32([UInt32])
-	}
+public protocol MeshSource {
+	associatedtype Index: MetalIndex
+	var vertices: [Vertex] { get }
+	var indices: [Index] { get }
+	var cullMode: MTLCullMode { get }
+}
 
+public struct Mesh<Index: MetalIndex>: MeshSource {
 	public let vertices: [Vertex]
-	public let indices: IndexData
+	public let indices: [Index]
 	public let cullMode: MTLCullMode
 
 	public init(
 		vertices: [Vertex],
-		indices: IndexData,
+		indices: [Index],
 		cullMode: MTLCullMode = .none,
 	) {
 		self.vertices = vertices
@@ -52,15 +54,9 @@ public struct GPUMesh {
 		self.cullMode = cullMode
 	}
 
-	public init?(_ device: MTLDevice, mesh: Mesh) throws {
-		switch mesh.indices {
-			case .uint16(let indices):
-				try self.init(
-					device, vertices: mesh.vertices, indices: indices, cullMode: mesh.cullMode)
-			case .uint32(let indices):
-				try self.init(
-					device, vertices: mesh.vertices, indices: indices, cullMode: mesh.cullMode)
-		}
+	public init?(_ device: MTLDevice, mesh: some MeshSource) throws {
+		try self.init(
+			device, vertices: mesh.vertices, indices: mesh.indices, cullMode: mesh.cullMode)
 	}
 
 	public init?<I: MetalIndex>(

@@ -27,7 +27,7 @@ public enum Primitive {
 		public var model: Matrix { Matrix.translation(center) * Matrix.scale(size) }
 
 		public var meshId: MeshID = .primitiveCube
-		public let mesh: Mesh = {
+		public func getMesh() -> some MeshSource {
 			let s = Float(0.5)
 			let vertices: [Vertex] = [
 				Vertex(position: Vec3(-s, -s, s), normal: SIMD3<Float>(0, 0, 1)),
@@ -69,8 +69,8 @@ public enum Primitive {
 				16, 17, 18, 18, 19, 16,
 				20, 21, 22, 22, 23, 20,
 			]
-			return Mesh(vertices: vertices, indices: .uint16(indices))
-		}()
+			return Mesh(vertices: vertices, indices: indices)
+		}
 	}
 	public struct Sphere: InstancedRenderable {
 		public init(center: Vec3, radius: Float, color: Vec4, vertexCnt: Int = 30) {
@@ -90,7 +90,7 @@ public enum Primitive {
 		}
 
 		public var meshId: MeshID { .primitiveSphere(vertexCnt: vertexCnt) }
-		public var mesh: Mesh {
+		public func getMesh() -> some MeshSource {
 			let vertexCnt: UInt16 = UInt16(vertexCnt)
 			var vertices: [Vertex] = []
 			var indices: [UInt16] = []
@@ -130,7 +130,7 @@ public enum Primitive {
 					k2 += 1
 				}
 			}
-			return Mesh(vertices: vertices, indices: .uint16(indices))
+			return Mesh(vertices: vertices, indices: indices)
 		}
 	}
 }

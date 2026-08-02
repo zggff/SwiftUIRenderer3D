@@ -57,7 +57,7 @@ public final class Scene3D {
 		removeAll()
 		let context = Context(scene: self)
 		try drawCallback(context)
-        self.drawCallback = nil
+		self.drawCallback = nil
 	}
 
 	/// prepares the scene for drawing but does not actually execute the passed closure
@@ -75,6 +75,11 @@ public final class Scene3D {
 			DrawBuilder(context: self, objects: objects)
 		}
 
+		/// initialise a drawBuilder with objects
+		public func draw<T: Renderable>(_ objects: T...) -> DrawBuilder<T> {
+			DrawBuilder(context: self, objects: objects)
+		}
+
 		public struct DrawBuilder<T: Renderable> {
 			fileprivate let context: Context
 			fileprivate var objects: [T]
@@ -86,7 +91,7 @@ public final class Scene3D {
 					throw RenderError.scene(.noRenderGroup(id))
 				}
 				guard let storage = group.storage as? any ObjectStorage<T.UniformType> else {
-                    throw RenderError.scene(.invalidStorage)
+					throw RenderError.scene(.invalidStorage)
 				}
 				try storage.append(objects: objects)
 			}
