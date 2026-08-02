@@ -1,21 +1,7 @@
 import Metal
 import Render3DShaders
 
-public enum RenderMode {
-	public protocol Primitive {
-		static var primitiveType: MTLPrimitiveType { get }
-	}
-
-	public struct Line: Primitive {
-		public static var primitiveType: MTLPrimitiveType { .line }
-	}
-
-	public struct Triangle: Primitive {
-		public static var primitiveType: MTLPrimitiveType { .triangle }
-	}
-}
-
-public class NoLightRenderer<T: RenderMode.Primitive>: MetalRenderer {
+public class WireframeRenderer: MetalRenderer {
 	public typealias UniformType = Uniforms.Instance
 
 	public let device: any MTLDevice
@@ -31,9 +17,9 @@ public class NoLightRenderer<T: RenderMode.Primitive>: MetalRenderer {
 		let pipelineDescriptor = MTLRenderPipelineDescriptor()
 		library = try Library(type: .builtin, for: device)
 
-		pipelineDescriptor.vertexFunction = try library.makeFunction(name: "vertexMain")
+		pipelineDescriptor.vertexFunction = try library.makeFunction(name: "wireframeVertex")
 		pipelineDescriptor.fragmentFunction = try library.makeFunction(
-			name: "fragmentWireframeMain")
+			name: "wireframeFragment")
 		pipelineDescriptor.depthAttachmentPixelFormat = .depth32Float
 		pipelineDescriptor.vertexDescriptor = Vertex.defaultLayout
 
@@ -81,7 +67,7 @@ public class NoLightRenderer<T: RenderMode.Primitive>: MetalRenderer {
 				instancesBuffer[ctx.frameIndex], offset: i.offset, index: 3)
 
 			renderEncoder.drawIndexedPrimitives(
-				type: T.primitiveType, indexCount: i.mesh.count, indexType: i.mesh.indexType,
+				type: .triangle, indexCount: i.mesh.count, indexType: i.mesh.indexType,
 				indexBuffer: i.mesh.index,
 				indexBufferOffset: 0, instanceCount: i.count)
 		}
@@ -91,11 +77,6 @@ public class NoLightRenderer<T: RenderMode.Primitive>: MetalRenderer {
 }
 
 extension RenderGroupIdentity
-where G == RenderGroup<NoLightRenderer<RenderMode.Line>, GroupedObjectStorage<Uniforms.Instance>> {
+where G == RenderGroup<WireframeRenderer, GroupedObjectStorage<Uniforms.Instance>> {
 	public static var wireframe: Self { .init() }
-}
-
-extension RenderGroupIdentity
-where G == RenderGroup<NoLightRenderer<RenderMode.Triangle>, GroupedObjectStorage<Uniforms.Instance>> {
-	public static var noLight: Self { .init() }
 }
