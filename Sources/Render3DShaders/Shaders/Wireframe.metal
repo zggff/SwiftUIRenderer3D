@@ -5,7 +5,6 @@ using namespace metal;
 
 fragment half4 fragmentWireframeMain(VertexOutput frag [[stage_in]],
                                     constant InstanceUniform *models [[buffer(3)]]) {
-    InstanceUniform instance = models[frag.instanceID];
-    return half4(instance.color);
+    return half4(half3(frag.color.rgb), half(1.0));
 }
 
