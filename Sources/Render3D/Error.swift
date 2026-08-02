@@ -29,7 +29,7 @@ public enum RenderError: LocalizedError {
 	}
 
 	public enum SceneError: LocalizedError {
-		case noRenderGroup(RenderGroup.ID)
+		case noRenderGroup(String)
 		case invalidStorage
 		public var errorDescription: String? {
 			switch self {

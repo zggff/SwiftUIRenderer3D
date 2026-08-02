@@ -1,10 +1,10 @@
 import Metal
 
 public protocol MetalRenderer<UniformType>: AnyObject {
-    associatedtype UniformType: Uniform
+	associatedtype UniformType: Uniform
 	init(device: any MTLDevice, frameCount: Int) throws
 	func update(drawableSize size: CGSize)
-	func draw(context: RenderContext, group: RenderGroup) throws
+	func draw(context: RenderContext, storage: some ObjectStorage) throws
 }
 
 public struct RenderContext {
@@ -53,7 +53,7 @@ public class Renderer {
 	var depthTexture: MTLTexture?
 	var meshCache: MeshCache
 
-	var renderers: [RenderGroup.ID: (any MetalRenderer)] = [:]
+	var renderers: [any MetalRenderer] = []
 	var size: CGSize = CGSize(width: 1, height: 1)
 
 	var ringBuffers: [[ObjectIdentifier: MTLBuffer]]
@@ -72,26 +72,19 @@ public class Renderer {
 
 	public func prepare(for scene: Scene3D) throws {
 		for g in scene.renderGroups {
-			if renderers[g.id] == nil {
-				do {
-					renderers[g.id] = try g.rendererType.init(
-						device: device, frameCount: frameCount)
-				} catch {
-					throw RenderError.pipeline(id: g.id.rawValue, error: error)
-				}
+			do {
+				try renderers.append(g.renderer.init(device: device, frameCount: frameCount))
+			} catch {
+				throw RenderError.pipeline(id: String(describing: g), error: error)
 			}
 		}
 
 	}
 
-	public func prepared(for scene: Scene3D) -> Bool {
-		return scene.renderGroups.allSatisfy({ g in renderers.keys.contains(g.id) })
-	}
-
 	public func update(drawableSize size: CGSize) {
 		updateDepthTexture(size: size)
 		self.size = size
-		for renderer in renderers.values {
+		for renderer in renderers {
 			renderer.update(drawableSize: size)
 		}
 	}
@@ -123,7 +116,7 @@ public class Renderer {
 		let sem = semaphore
 		commandBuffer.addCompletedHandler({ _ in sem.signal() })
 
-        try scene.executeDraw()
+		try scene.executeDraw()
 		try prepare(for: scene)
 		update(drawableSize: size)
 		guard let depthTexture else { return }
@@ -153,9 +146,8 @@ public class Renderer {
 			frameIndex: frameIndex
 		)
 
-		for g in scene.renderGroups.sorted(by: { a, b in a.order < b.order }) {
-			guard let renderer = renderers[g.id] else { continue }
-			try renderer.draw(context: context, group: g)
+		for (g, renderer) in zip(scene.renderGroups, renderers) {
+			try renderer.draw(context: context, storage: g.storage)
 			renderPassDescriptor.colorAttachments[0].loadAction = .load
 			renderPassDescriptor.depthAttachment.loadAction = .load
 		}

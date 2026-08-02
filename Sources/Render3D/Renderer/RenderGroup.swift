@@ -1,37 +1,31 @@
 import Metal
+import Render3DShaders
 
+public protocol AnyRenderGroup {
+	associatedtype Storage: ObjectStorage
+	associatedtype Renderer: MetalRenderer where Renderer.UniformType == Storage.UniformType
+	init()
+	func removeAll()
+	var renderer: Renderer.Type { get }
+	var storage: Storage { get }
 
-public final class RenderGroup {
-	public struct ID: Hashable, ExpressibleByStringLiteral, RawRepresentable, Sendable {
-		public let rawValue: String
+}
 
-		public init(rawValue: String) {
-			self.rawValue = rawValue
-		}
-		public init(stringLiteral value: String) {
-			self.rawValue = value
-		}
+public final class RenderGroup<Renderer: MetalRenderer, Storage: ObjectStorage>: AnyRenderGroup
+where Renderer.UniformType == Storage.UniformType {
+	public let storage: Storage = Storage()
+	public let renderer = Renderer.self
+
+	public required init() {}
+
+	public func removeAll() {
+		self.storage.removeAll()
 	}
+}
 
-	public let id: ID
-	public let order: Int
-
-	public let storage: any ObjectStorage
-	public let rendererType: any MetalRenderer.Type
-    public let uniformType: Uniform.Type
-    public let storageType: any ObjectStorage.Type
-
-	public init<R: MetalRenderer, S: ObjectStorage>(
-		id: ID, order: Int, renderer: R.Type, storage: S.Type
-	)
-	where
-		R.UniformType == S.UniformType
-	{
-		self.id = id
-		self.order = order
-		self.rendererType = renderer
-		self.storage = storage.init()
-        self.uniformType = R.UniformType.self
-        self.storageType = S.self
+public struct RenderGroupIdentity<G: AnyRenderGroup> {
+	public init() {}
+	public func createGroup() -> any AnyRenderGroup {
+		return G()
 	}
 }

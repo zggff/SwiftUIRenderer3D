@@ -1,17 +1,12 @@
 public final class Scene3D {
-	public init(
-		renderGroups: [RenderGroup] = [.opaque, .transparent],
-		additionalRenderGroups: [RenderGroup] = []
-	) {
-		self.renderGroups = renderGroups
-		self.renderGroups.append(contentsOf: additionalRenderGroups)
+	public init() {}
+
+	public func withGroup<G: AnyRenderGroup>(_ id: RenderGroupIdentity<G>) -> Self {
+        self.renderGroups.append(G())
+        return self
 	}
 
-	public private(set) var renderGroups: [RenderGroup]
-
-	public func addRenderGroup(_ descriptor: RenderGroup) {
-		renderGroups.append(descriptor)
-	}
+	public private(set) var renderGroups: [any AnyRenderGroup] = []
 
 	public var uniforms: [ObjectIdentifier: any Uniform] = [
 		ObjectIdentifier(Uniforms.SceneLight.self):
@@ -44,7 +39,7 @@ public final class Scene3D {
 
 	public func removeAll() {
 		for g in renderGroups {
-			g.storage.removeAll()
+			g.removeAll()
 		}
 	}
 
@@ -58,6 +53,16 @@ public final class Scene3D {
 		let context = Context(scene: self)
 		try drawCallback(context)
 		self.drawCallback = nil
+	}
+
+	public func group<G: AnyRenderGroup>(for identity: RenderGroupIdentity<G>) -> G? {
+		renderGroups.first(where: { g in
+			ObjectIdentifier(type(of: g)) == ObjectIdentifier(G.self)
+		}) as? G
+	}
+
+	public func storage<G: AnyRenderGroup>(for identity: RenderGroupIdentity<G>) -> G.Storage? {
+		return group(for: identity)?.storage
 	}
 
 	/// prepares the scene for drawing but does not actually execute the passed closure
@@ -85,22 +90,14 @@ public final class Scene3D {
 			fileprivate var objects: [T]
 
 			/// submit Renderable objects to object storage
-			public func `in`(_ id: RenderGroup.ID) throws {
-				guard let group = context.scene.renderGroups.first(where: { g in g.id == id })
-				else {
-					throw RenderError.scene(.noRenderGroup(id))
-				}
-				guard let storage = group.storage as? any ObjectStorage<T.UniformType> else {
-					throw RenderError.scene(.invalidStorage)
+            @discardableResult
+			public func `in`<G: AnyRenderGroup>(_ identity: RenderGroupIdentity<G>) throws -> DrawBuilder
+			where T.UniformType == G.Storage.UniformType {
+				guard let storage = context.scene.storage(for: identity) else {
+					throw RenderError.scene(.noRenderGroup(String(describing: identity)))
 				}
 				try storage.append(objects: objects)
-			}
-
-			/// submit Renderable objects to object storage
-			public func `in`(_ ids: RenderGroup.ID...) throws {
-				for id in ids {
-					try self.in(id)
-				}
+                return self
 			}
 		}
 	}

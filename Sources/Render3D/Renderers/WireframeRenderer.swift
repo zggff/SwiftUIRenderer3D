@@ -56,8 +56,8 @@ public class NoLightRenderer<T: RenderMode.Primitive>: MetalRenderer {
 
 	public func update(drawableSize size: CGSize) {}
 
-	public func draw(context ctx: RenderContext, group: RenderGroup) throws {
-		let instructions = try group.storage.renderInfo(
+	public func draw(context ctx: RenderContext, storage: some ObjectStorage) throws {
+		let instructions = try storage.renderInfo(
 			device: device, cache: ctx.cache, buffer: &instancesBuffer[ctx.frameIndex],
 		)
 
@@ -90,21 +90,12 @@ public class NoLightRenderer<T: RenderMode.Primitive>: MetalRenderer {
 	}
 }
 
-extension RenderGroup.ID {
-	public static let wireframe: RenderGroup.ID = "builtin.wireframe"
-	public static let noLight: RenderGroup.ID = "builtin.noLight"
+extension RenderGroupIdentity
+where G == RenderGroup<NoLightRenderer<RenderMode.Line>, GroupedObjectStorage<Uniforms.Instance>> {
+	public static var wireframe: Self { .init() }
 }
 
-extension RenderGroup {
-	public static var wireframe: RenderGroup {
-		RenderGroup(
-			id: ID.wireframe, order: 1, renderer: NoLightRenderer<RenderMode.Line>.self,
-			storage: GroupedObjectStorage.self)
-	}
-	public static var noLight: RenderGroup {
-		RenderGroup(
-			id: ID.noLight, order: 2, renderer: NoLightRenderer<RenderMode.Triangle>.self,
-			storage: GroupedObjectStorage.self)
-	}
-
+extension RenderGroupIdentity
+where G == RenderGroup<NoLightRenderer<RenderMode.Triangle>, GroupedObjectStorage<Uniforms.Instance>> {
+	public static var noLight: Self { .init() }
 }

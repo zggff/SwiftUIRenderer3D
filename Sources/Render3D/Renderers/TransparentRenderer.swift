@@ -89,12 +89,12 @@ public class TransparentRenderer: MetalRenderer {
 		updateTextures(size: size)
 	}
 
-	public func draw(context ctx: RenderContext, group: RenderGroup) throws {
+	public func draw(context ctx: RenderContext, storage: some ObjectStorage) throws {
 		guard
 			let accum = accumTexture, let reveal = revealTexture
 		else { return }
 
-		let instructions = try group.storage.renderInfo(
+		let instructions = try storage.renderInfo(
 			device: device, cache: ctx.cache, buffer: &instancesBuffer[ctx.frameIndex],
 		)
 
@@ -149,14 +149,8 @@ public class TransparentRenderer: MetalRenderer {
 	}
 }
 
-extension RenderGroup.ID {
-	public static let transparent: RenderGroup.ID = "builtin.transparent"
+extension RenderGroupIdentity
+where G == RenderGroup<TransparentRenderer, GroupedObjectStorage<Uniforms.Instance>> {
+	public static var transparent: Self { .init() }
 }
 
-extension RenderGroup {
-	public static var transparent: RenderGroup {
-		RenderGroup(
-			id: ID.transparent, order: 1000, renderer: TransparentRenderer.self,
-			storage: GroupedObjectStorage.self)
-	}
-}
