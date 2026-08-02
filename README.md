@@ -7,7 +7,7 @@ import Render3DViews
 import SwiftUI
 
 struct ContentView: View {
-	let scene = Scene3D()
+	let scene = Scene3D().withGroup(.transparent)
 	@State var camera = OrbitingCameraState()
 	@State var cnt = 10000
 	private func setScene() {
@@ -21,7 +21,7 @@ struct ContentView: View {
         })
 
 		scene.draw({ ctx in
-			ctx.draw(points)
+			try ctx.draw(points).in(.transparent)
 		})
 	}
 	var body: some View {
