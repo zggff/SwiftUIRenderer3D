@@ -1,4 +1,3 @@
-import Render3DViews
 import SwiftUI
 
 #if canImport(AppKit)
