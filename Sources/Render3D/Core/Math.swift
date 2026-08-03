@@ -94,6 +94,19 @@ extension Vec3 {
 		)
 	}
 
+	public func perpendicularCross() -> (Vec3, Vec3)? {
+		guard self.lengthSquared > Float.ulpOfOne else { return nil }
+		let v: Vec3
+		if abs(self.x) < Float.ulpOfOne && abs(self.y) < Float.ulpOfOne {
+			v = Vec3(1, 0, 0)
+		} else {
+			v = Vec3(0, 0, 1)
+		}
+		let p1 = cross(self, v)
+		let p2 = cross(self, p1)
+		return (normalize(p1), normalize(p2))
+	}
+
 	public var length: Float {
 		return simd_length(self)
 	}

@@ -1,57 +1,27 @@
-extension Mesh {
-	static func + (_ a: Mesh, _ b: Mesh) {
-		let vertexCount = Self.Index(a.vertices.count)
-		var vertices = a.vertices
-		var indices = a.indices
-		vertices.append(contentsOf: b.vertices)
-		indices.append(contentsOf: b.indices.map({ $0 + vertexCount }))
-	}
-}
-
-extension Vec3 {
-	func perpendicularCross() -> (Vec3, Vec3)? {
-		guard self.lengthSquared > Float.ulpOfOne else { return nil }
-		let v: Vec3
-		if abs(self.x) < Float.ulpOfOne && abs(self.y) < Float.ulpOfOne {
-			v = Vec3(1, 0, 0)
-		} else {
-			v = Vec3(0, 0, 1)
-		}
-		let p1 = cross(self, v)
-		let p2 = cross(self, p1)
-		return (normalize(p1), normalize(p2))
-	}
-}
-
 public class MeshBuilder<I: MetalIndex> {
-	private var indices: [I] = []
-	private var vertices: [Vertex] = []
-	public var mesh: Mesh<I> {
-		return Mesh<I>(vertices: vertices, indices: indices, cullMode: .none)
-	}
+	public private(set) var mesh: Mesh<I> = Mesh(vertices: [], indices: [], cullMode: .none)
 
 	public func addTriangle(_ a: Vec3, _ b: Vec3, _ c: Vec3, color: Vec4) {
-		let startIdx = I(vertices.count)
 		let normal = normalize(cross(b - a, c - a))
-		vertices.append(contentsOf: [
-			Vertex(position: a, normal: normal, color: color),
-			Vertex(position: b, normal: normal, color: color),
-			Vertex(position: c, normal: normal, color: color),
-		])
-		indices.append(contentsOf: [startIdx, startIdx + 1, startIdx + 2])
+		mesh += Mesh(
+			vertices: [
+				Vertex(position: a, normal: normal, color: color),
+				Vertex(position: b, normal: normal, color: color),
+				Vertex(position: c, normal: normal, color: color),
+			], indices: [0, 1, 2])
 	}
 
 	public func addQuad(_ a: Vec3, _ b: Vec3, _ c: Vec3, _ d: Vec3, color: Vec4) {
-		let startIdx = I(vertices.count)
 		let normal = normalize(cross(b - a, c - a))
-		vertices.append(contentsOf: [
-			Vertex(position: a, normal: normal, color: color),
-			Vertex(position: b, normal: normal, color: color),
-			Vertex(position: c, normal: normal, color: color),
-			Vertex(position: d, normal: normal, color: color),
-		])
-		indices.append(contentsOf: [startIdx, startIdx + 1, startIdx + 2])
-		indices.append(contentsOf: [startIdx + 2, startIdx + 3, startIdx + 0])
+		mesh += Mesh(
+			vertices: [
+				Vertex(position: a, normal: normal, color: color),
+				Vertex(position: b, normal: normal, color: color),
+				Vertex(position: c, normal: normal, color: color),
+				Vertex(position: d, normal: normal, color: color),
+			],
+			indices: [0, 1, 2, 2, 3, 0]
+		)
 	}
 
 	public func create(f: (inout Context) -> Void) -> Self {

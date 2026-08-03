@@ -21,8 +21,8 @@ public protocol MeshSource {
 }
 
 public struct Mesh<Index: MetalIndex>: MeshSource {
-	public let vertices: [Vertex]
-	public let indices: [Index]
+	public var vertices: [Vertex]
+	public var indices: [Index]
 	public let cullMode: MTLCullMode
 
 	public init(
@@ -93,5 +93,22 @@ public struct GPUMesh {
 		self.init(
 			vertex: vertex, index: index, count: indices.count, indexType: I.metalIndexType,
 			cullMode: cullMode)
+	}
+}
+
+extension Mesh {
+	static func + (_ a: Mesh, _ b: Mesh) -> Self {
+		let vertexCount = Self.Index(a.vertices.count)
+		var vertices = a.vertices
+		var indices = a.indices
+		vertices.append(contentsOf: b.vertices)
+		indices.append(contentsOf: b.indices.map({ $0 + vertexCount }))
+		return Mesh(vertices: vertices, indices: indices, cullMode: a.cullMode)
+	}
+
+	static func += (_ a: inout Mesh, _ b: Mesh) {
+		let vertexCount = Self.Index(a.vertices.count)
+		a.vertices.append(contentsOf: b.vertices)
+		a.indices.append(contentsOf: b.indices.map({ $0 + vertexCount }))
 	}
 }
