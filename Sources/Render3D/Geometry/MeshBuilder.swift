@@ -1,5 +1,17 @@
-public class MeshBuilder<I: MetalIndex> {
-	public private(set) var mesh: Mesh<I> = Mesh(vertices: [], indices: [], cullMode: .none)
+public class MeshBuilder<I: MetalIndex>: MeshProvider {
+	public var meshId = MeshID(rawValue: "\(UUID())")
+	public let cachable: Bool = false
+
+	public init() {}
+	private var mesh: Mesh<I> = Mesh(vertices: [], indices: [], cullMode: .none)
+
+	public func getMesh() throws -> Mesh<I> {
+		for f in funcs {
+			var context = Context(builder: self)
+			try f(&context)
+		}
+		return mesh
+	}
 
 	public func addTriangle(_ a: Vec3, _ b: Vec3, _ c: Vec3, color: Vec4) {
 		let normal = normalize(cross(b - a, c - a))
@@ -24,9 +36,10 @@ public class MeshBuilder<I: MetalIndex> {
 		)
 	}
 
-	public func create(f: (inout Context) -> Void) -> Self {
-		var context = Context(builder: self)
-		f(&context)
+	public var funcs: [(inout Context) throws -> Void] = []
+
+	@discardableResult public func create(f: @escaping (inout Context) throws -> Void) -> Self {
+		funcs.append(f)
 		return self
 	}
 
@@ -95,17 +108,21 @@ public class MeshBuilder<I: MetalIndex> {
 			}
 		}
 
-		public func drawClosedPath(points: [Vec3]) {
+		public func drawClosedPath(_ points: [Vec3]) {
 			guard let first = points.first else { return }
 			if let fillColor = fillColor, points.count >= 3 {
 				for i in 1..<(points.count - 1) {
 					builder.addTriangle(first, points[i], points[i + 1], color: fillColor)
 				}
 			}
-			drawPath(points: points + [first])
+			drawPath(points + [first])
 		}
 
-		public func drawPath(points: [Vec3]) {
+		public func drawLine(_ a: Vec3, _ b: Vec3) {
+			drawPath([a, b])
+		}
+
+		public func drawPath(_ points: [Vec3]) {
 			guard color != nil else { return }
 
 			for (prev, next) in zip(points, points.dropFirst()) {
@@ -114,6 +131,18 @@ public class MeshBuilder<I: MetalIndex> {
 			}
 			if let last = points.last, points.first != points.last {
 				drawSphere(at: last, radius: thickness)
+			}
+		}
+
+		public func drawTriangle(_ a: Vec3, _ b: Vec3, _ c: Vec3) {
+			if let color {
+				builder.addTriangle(a, b, c, color: color)
+			}
+		}
+
+		public func drawQuad(_ a: Vec3, _ b: Vec3, _ c: Vec3, _ d: Vec3) {
+			if let color {
+				builder.addQuad(a, b, c, d, color: color)
 			}
 		}
 
@@ -146,10 +175,10 @@ public class MeshBuilder<I: MetalIndex> {
 			}
 
 			if thickness > 0 {
-				drawPath(points: [v000, v100, v101, v001, v000, v010, v110, v111, v011, v010])
-				drawPath(points: [v100, v110])
-				drawPath(points: [v101, v111])
-				drawPath(points: [v001, v011])
+				drawPath([v000, v100, v101, v001, v000, v010, v110, v111, v011, v010])
+				drawPath([v100, v110])
+				drawPath([v101, v111])
+				drawPath([v001, v011])
 			}
 		}
 
@@ -159,6 +188,9 @@ public class MeshBuilder<I: MetalIndex> {
 			drawCube(center: center, size: size)
 		}
 
+		public func drawMesh<J: MetalIndex>(_ mesh: Mesh<J>, transform: Matrix) {
+			builder.mesh += (transform * mesh)
+		}
 	}
 
 }
@@ -187,6 +219,6 @@ public class PrimitiveFromBuilder<I: MetalIndex>: InstancedRenderable {
 		self.position = position
 		return self
 	}
-	public func getMesh() -> Mesh<I> { builder.mesh }
+	public func getMesh() throws -> Mesh<I> { try builder.getMesh() }
 
 }

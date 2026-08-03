@@ -97,18 +97,44 @@ public struct GPUMesh {
 }
 
 extension Mesh {
-	static func + (_ a: Mesh, _ b: Mesh) -> Self {
+	static func + <I: MetalIndex, J: MetalIndex>(_ a: Mesh<I>, _ b: Mesh<J>) -> any MeshSource {
+		let totalCount = a.vertices.count + b.vertices.count
+		if totalCount > UInt16.max {
+			return combineMeshes(a, b, target: UInt32.self)
+		}
+		return combineMeshes(a, b, target: UInt16.self)
+	}
+
+	private static func combineMeshes<I: MetalIndex, J: MetalIndex, T: MetalIndex>(
+		_ a: Mesh<I>, _ b: Mesh<J>, target: T.Type
+	) -> Mesh<T> {
+		let count = T(a.vertices.count)
+		let vertices = a.vertices + b.vertices
+		let indices = a.indices.map({ T($0) }) + b.indices.map({ T($0) + count })
+		return Mesh<T>(vertices: vertices, indices: indices, cullMode: a.cullMode)
+	}
+
+	static func += <J: MetalIndex>(_ a: inout Mesh, _ b: Mesh<J>) {
 		let vertexCount = Self.Index(a.vertices.count)
-		var vertices = a.vertices
-		var indices = a.indices
-		vertices.append(contentsOf: b.vertices)
-		indices.append(contentsOf: b.indices.map({ $0 + vertexCount }))
-		return Mesh(vertices: vertices, indices: indices, cullMode: a.cullMode)
+		a.vertices.append(contentsOf: b.vertices)
+		a.indices.append(contentsOf: b.indices.map({ Self.Index($0) + vertexCount }))
 	}
 
 	static func += (_ a: inout Mesh, _ b: Mesh) {
 		let vertexCount = Self.Index(a.vertices.count)
 		a.vertices.append(contentsOf: b.vertices)
 		a.indices.append(contentsOf: b.indices.map({ $0 + vertexCount }))
+	}
+
+	static func * (_ mat: Matrix, _ mesh: Mesh) -> Mesh {
+		let inv = mat.inverse.transposed
+		let vertices = mesh.vertices.map({ v in
+			let newPos = mat * Vec4(v.position, 1.0)
+			let newNormal = inv * Vec4(v.normal, 0.0)
+
+			return Vertex(
+				position: newPos.xyz, normal: normalize(newNormal.xyz), colorUV: v.colorUV)
+		})
+		return Mesh(vertices: vertices, indices: mesh.indices, cullMode: mesh.cullMode)
 	}
 }

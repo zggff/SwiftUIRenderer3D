@@ -84,6 +84,12 @@ extension Matrix {
 	}
 }
 
+extension Vec4 {
+	public var xyz: Vec3 {
+		Vec3(x, y, z)
+	}
+}
+
 extension Vec3 {
 	/// converts [radial, polar, azimuth] to [x, y, z]
 	public var polar: Vec3 {
