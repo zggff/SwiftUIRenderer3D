@@ -68,9 +68,9 @@ public struct TextRenderer {
 				m: c,
 				transform: Matrix.translation(
 					Vec3(
-                    Float(col) * (Self.CharWidth + horizontalPadding),
-                    -Float(row) * (Self.CharHeight + verticalPadding),
-                    0)), color: nil)
+						Float(col) * (Self.CharWidth + horizontalPadding),
+						-Float(row) * (Self.CharHeight + verticalPadding),
+						0)), color: nil)
 
 			col += 1
 			if col >= width {
@@ -86,32 +86,33 @@ extension Character: MeshProvider {
 	public var meshId: Render3D.MeshID { MeshID(rawValue: "Character: \(self)") }
 
 	public func getMesh() throws -> Mesh<UInt16> {
-		switch self {
+		let mesh = MeshBuilder<UInt16>()
+		switch self.uppercased() {
 			case "0":
-				return MeshBuilder<UInt16>().create { ctx in
-					ctx.drawClosedPath(points: [
+				mesh.create { ctx in
+					ctx.drawClosedPath([
 						Vec3(0, 0, 0),
 						Vec3(1, 0, 0),
 						Vec3(1, 2, 0),
 						Vec3(0, 2, 0),
 					])
-				}.mesh
+				}
 			case "1":
-				return MeshBuilder<UInt16>().create { ctx in
-					ctx.drawPath(points: [
+				mesh.create { ctx in
+					ctx.drawPath([
 						Vec3(0.2, 0, 0),
 						Vec3(0.5, 0, 0),
 						Vec3(0.5, 2, 0),
 						Vec3(0.2, 2, 0),
 					])
-					ctx.drawPath(points: [
+					ctx.drawPath([
 						Vec3(0.2, 0, 0),
 						Vec3(0.8, 0, 0),
 					])
-				}.mesh
+				}
 			case "2":
-				return MeshBuilder<UInt16>().create { ctx in
-					ctx.drawPath(points: [
+				mesh.create { ctx in
+					ctx.drawPath([
 						Vec3(0, 2, 0),
 						Vec3(1, 2, 0),
 						Vec3(1, 1, 0),
@@ -119,10 +120,10 @@ extension Character: MeshProvider {
 						Vec3(0, 0, 0),
 						Vec3(1, 0, 0),
 					])
-				}.mesh
+				}
 			case "3":
-				return MeshBuilder<UInt16>().create { ctx in
-					ctx.drawPath(points: [
+				mesh.create { ctx in
+					ctx.drawPath([
 						Vec3(0, 2, 0),
 						Vec3(1, 2, 0),
 						Vec3(1, 1, 0),
@@ -131,22 +132,22 @@ extension Character: MeshProvider {
 						Vec3(1, 0, 0),
 						Vec3(0, 0, 0),
 					])
-				}.mesh
+				}
 			case "4":
-				return MeshBuilder<UInt16>().create { ctx in
-					ctx.drawPath(points: [
+				mesh.create { ctx in
+					ctx.drawPath([
 						Vec3(0, 2, 0),
 						Vec3(0, 1, 0),
 						Vec3(1, 1, 0),
 					])
-					ctx.drawPath(points: [
+					ctx.drawPath([
 						Vec3(1, 2, 0),
 						Vec3(1, 0, 0),
 					])
-				}.mesh
+				}
 			case "5":
-				return MeshBuilder<UInt16>().create { ctx in
-					ctx.drawPath(points: [
+				mesh.create { ctx in
+					ctx.drawPath([
 						Vec3(1, 2, 0),
 						Vec3(0, 2, 0),
 						Vec3(0, 1, 0),
@@ -154,10 +155,10 @@ extension Character: MeshProvider {
 						Vec3(1, 0, 0),
 						Vec3(0, 0, 0),
 					])
-				}.mesh
+				}
 			case "6":
-				return MeshBuilder<UInt16>().create { ctx in
-					ctx.drawPath(points: [
+				mesh.create { ctx in
+					ctx.drawPath([
 						Vec3(1, 2, 0),
 						Vec3(0, 2, 0),
 						Vec3(0, 0, 0),
@@ -165,33 +166,33 @@ extension Character: MeshProvider {
 						Vec3(1, 1, 0),
 						Vec3(0, 1, 0),
 					])
-				}.mesh
+				}
 			case "7":
-				return MeshBuilder<UInt16>().create { ctx in
-					ctx.drawPath(points: [
+				mesh.create { ctx in
+					ctx.drawPath([
 						Vec3(0, 2, 0),
 						Vec3(1, 2, 0),
 						Vec3(0.5, 0, 0),
 					])
-				}.mesh
+				}
 			case "8":
-				return MeshBuilder<UInt16>().create { ctx in
-					ctx.drawClosedPath(points: [
+				mesh.create { ctx in
+					ctx.drawClosedPath([
 						Vec3(0, 0, 0),
 						Vec3(1, 0, 0),
 						Vec3(1, 1, 0),
 						Vec3(0, 1, 0),
 					])
-					ctx.drawClosedPath(points: [
+					ctx.drawClosedPath([
 						Vec3(0, 1, 0),
 						Vec3(1, 1, 0),
 						Vec3(1, 2, 0),
 						Vec3(0, 2, 0),
 					])
-				}.mesh
+				}
 			case "9":
-				return MeshBuilder<UInt16>().create { ctx in
-					ctx.drawPath(points: [
+				mesh.create { ctx in
+					ctx.drawPath([
 						Vec3(0, 0, 0),
 						Vec3(1, 0, 0),
 						Vec3(1, 2, 0),
@@ -199,9 +200,34 @@ extension Character: MeshProvider {
 						Vec3(0, 1, 0),
 						Vec3(1, 1, 0),
 					])
-				}.mesh
+				}
+			case "X":
+				mesh.create { ctx in
+					ctx.drawLine(Vec3(0, 0, 0), Vec3(1, 2, 0))
+					ctx.drawLine(Vec3(0, 2, 0), Vec3(1, 0, 0))
+				}
+			case "Z":
+				mesh.create { ctx in
+					ctx.drawPath([
+						Vec3(0, 2, 0),
+						Vec3(1, 2, 0),
+						Vec3(0, 0, 0),
+						Vec3(1, 0, 0),
+					])
+				}
+			case "Y":
+				mesh.create { ctx in
+					ctx.drawPath([
+						Vec3(0, 2, 0),
+						Vec3(0.5, 1, 0),
+						Vec3(0.5, 0, 0),
+					])
+					ctx.drawLine(Vec3(0.5, 1, 0), Vec3(1, 2, 0))
+				}
+
 			default:
 				throw RenderError.mesh("not implemented for \(self)")
 		}
+		return try mesh.getMesh()
 	}
 }
